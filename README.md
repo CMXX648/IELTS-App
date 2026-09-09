@@ -14,9 +14,11 @@
 
 ## 一、项目现状（重要）
 
-- **当前阶段：纯设计阶段（Design Phase）**。仓库内**只有设计文档，没有任何业务代码**。
-- 本阶段产物即本目录 `README.md` + `docs/` 下的全套设计文档。
-- 设计评审通过后，才会进入工程搭建与编码阶段（详见 `docs/06-roadmap-acceptance.md`）。
+- **当前阶段：M1 工程骨架 + 链路验证（编码已开始）**。
+- 设计文档（`docs/01`–`06`）已冻结；Android 多模块工程自 M1 起落地（见 `docs/06-roadmap-acceptance.md` §2 M1）。
+- 模块：`app` / `core:{domain,speech,llm,data,designsystem}` / `feature:conversation`。
+- 本地构建：`source /home/box/android-env.sh`（或自备 SDK）后执行 `./gradlew :app:assembleDebug`。
+- **切勿提交** `local.properties`、API Key、keystore 或录音文件。
 
 ---
 
