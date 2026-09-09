@@ -94,7 +94,7 @@ fun SettingsScreen(
                 .padding(padding)
                 .padding(16.dp),
         ) {
-            Text("ST-01：密钥存本机 DataStore（Keystore AES 升级仍待后续切片）。切勿提交到 Git。")
+            Text("ST-01：API Key 经 Android Keystore AES/GCM 加密存本机；Base URL / Model 存 DataStore。切勿提交到 Git。")
             Spacer(Modifier.height(12.dp))
             OutlinedTextField(
                 value = baseUrl,

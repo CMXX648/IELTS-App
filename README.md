@@ -20,6 +20,7 @@
 - 本切片可用路径：首页选 Hometown → 自由对话（按住说话 + 延迟芯片）→ 结束会话 → EV 报告 → 收藏错题 → 档案今日统计。
 - 本地构建：`source /home/box/android-env.sh`（或自备 SDK）后执行 `./gradlew :app:assembleDebug`。
 - **切勿提交** `local.properties`、API Key、keystore 或录音文件。
+- **密钥安全（ST-01）**：LLM `apiKey` 仅经 **Android Keystore AES/GCM** 封装后落盘（ciphertext 在私有 SharedPreferences）；`baseUrl` / `model` 可明文存 DataStore。不使用已停维护的 `security-crypto` EncryptedSharedPreferences。升级后若设备上仍有旧版 DataStore 明文 `api_key`，会一次性迁入 Keystore 并清除明文。
 
 ### 延迟冒烟（LatencySmoke）
 
