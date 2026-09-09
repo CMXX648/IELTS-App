@@ -95,7 +95,46 @@ object TopicSeeds {
         groupName = "part1",
     )
 
-    fun all(): List<TopicEntity> = listOf(hometown, dailyRoutine, friends)
+    val p2Person = TopicEntity(
+        id = "T-p2-person",
+        code = "p2_person",
+        title = "Part 2 · Person",
+        titleZh = "Part 2 · 人物",
+        groupName = "part2",
+    )
+    val p2Place = TopicEntity(
+        id = "T-p2-place",
+        code = "p2_place",
+        title = "Part 2 · Place",
+        titleZh = "Part 2 · 地点",
+        groupName = "part2",
+    )
+    val p2Object = TopicEntity(
+        id = "T-p2-object",
+        code = "p2_object",
+        title = "Part 2 · Object",
+        titleZh = "Part 2 · 物品",
+        groupName = "part2",
+    )
+    val p2Experience = TopicEntity(
+        id = "T-p2-experience",
+        code = "p2_experience",
+        title = "Part 2 · Experience",
+        titleZh = "Part 2 · 经历",
+        groupName = "part2",
+    )
+    val p2Opinion = TopicEntity(
+        id = "T-p2-opinion",
+        code = "p2_opinion",
+        title = "Part 2 · Opinion",
+        titleZh = "Part 2 · 观点",
+        groupName = "part2",
+    )
+
+    fun all(): List<TopicEntity> = listOf(
+        hometown, dailyRoutine, friends,
+        p2Person, p2Place, p2Object, p2Experience, p2Opinion,
+    )
 }
 
 class SeedRunner(
@@ -104,7 +143,7 @@ class SeedRunner(
     private val grammarPointDao: GrammarPointDao,
 ) {
     suspend fun ensureSeeded() {
-        // IGNORE conflict: backfill new Part1 themes on existing installs
+        // IGNORE conflict: backfill Part1/Part2 themes on existing installs
         topicDao.insertAll(TopicSeeds.all())
         if (grammarPointDao.count() == 0) {
             grammarPointDao.insertAll(GrammarSeeds.all())

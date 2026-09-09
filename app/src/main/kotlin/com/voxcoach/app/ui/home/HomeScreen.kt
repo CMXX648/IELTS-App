@@ -57,6 +57,7 @@ class HomeViewModel @Inject constructor(
 fun HomeScreen(
     onStartConversation: (topicId: String) -> Unit,
     onStartPart1: () -> Unit = {},
+    onStartPart2: () -> Unit = {},
     onOpenGrammar: () -> Unit = {},
     onOpenDebug: () -> Unit,
     onOpenSettings: () -> Unit = {},
@@ -66,6 +67,7 @@ fun HomeScreen(
     val context = LocalContext.current
     var pendingTopicId by remember { mutableStateOf<String?>(null) }
     var pendingPart1 by remember { mutableStateOf(false) }
+    var pendingPart2 by remember { mutableStateOf(false) }
     var showRationale by remember { mutableStateOf(false) }
 
     fun hasMic(): Boolean =
@@ -88,10 +90,13 @@ fun HomeScreen(
         val granted = result[Manifest.permission.RECORD_AUDIO] == true || hasMic()
         val topic = pendingTopicId
         val wantPart1 = pendingPart1
+        val wantPart2 = pendingPart2
         pendingTopicId = null
         pendingPart1 = false
+        pendingPart2 = false
         when {
             granted && wantPart1 -> onStartPart1()
+            granted && wantPart2 -> onStartPart2()
             granted && topic != null -> onStartConversation(topic)
             !granted -> showRationale = true
         }
@@ -103,6 +108,7 @@ fun HomeScreen(
         } else {
             pendingTopicId = topicId
             pendingPart1 = false
+            pendingPart2 = false
             showRationale = true
         }
     }
@@ -112,6 +118,18 @@ fun HomeScreen(
             onStartPart1()
         } else {
             pendingPart1 = true
+            pendingPart2 = false
+            pendingTopicId = null
+            showRationale = true
+        }
+    }
+
+    fun tryStartPart2() {
+        if (hasMic()) {
+            onStartPart2()
+        } else {
+            pendingPart2 = true
+            pendingPart1 = false
             pendingTopicId = null
             showRationale = true
         }
@@ -123,6 +141,7 @@ fun HomeScreen(
                 showRationale = false
                 pendingTopicId = null
                 pendingPart1 = false
+                pendingPart2 = false
             },
             title = { Text("需要麦克风权限") },
             text = {
@@ -142,12 +161,17 @@ fun HomeScreen(
                         showRationale = false
                         val topic = pendingTopicId
                         val wantPart1 = pendingPart1
+                        val wantPart2 = pendingPart2
                         val perms = notificationPerms()
                         if (perms.isEmpty()) {
                             when {
                                 wantPart1 -> {
                                     pendingPart1 = false
                                     onStartPart1()
+                                }
+                                wantPart2 -> {
+                                    pendingPart2 = false
+                                    onStartPart2()
                                 }
                                 topic != null -> {
                                     pendingTopicId = null
@@ -166,6 +190,7 @@ fun HomeScreen(
                         showRationale = false
                         pendingTopicId = null
                         pendingPart1 = false
+                        pendingPart2 = false
                     },
                 ) { Text("取消") }
             },
@@ -215,6 +240,21 @@ fun HomeScreen(
                     }
                 }
             }
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp)) {
+                    Text("模拟口试 · Part 2", style = MaterialTheme.typography.titleLarge)
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "Cue card + 60s 准备 + 最长 120s 独白，连续录音与 ASR，结束后自动 EV（CV-02 P2）",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Button(onClick = { tryStartPart2() }, modifier = Modifier.fillMaxWidth()) {
+                        Text("开始 Part 2 模拟")
+                    }
+                }
+            }
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -250,13 +290,14 @@ fun HomeScreen(
                 }
             }
             Spacer(Modifier.height(8.dp))
-            val list = topics.ifEmpty {
+            val list = topics.filter { it.group == "part1" }.ifEmpty {
                 listOf(
                     Topic(
                         id = "T-hometown",
                         code = "hometown",
                         title = "Hometown",
                         titleZh = "家乡",
+                        group = "part1",
                     ),
                 )
             }
