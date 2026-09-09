@@ -14,13 +14,26 @@
 
 ## 一、项目现状（重要）
 
-- **当前阶段：M2 垂直切片已启动（M1 closeout + Session/EV/Room 主路径）**。
+- **当前阶段：MVP `1.0.0-mvp` 真机可验证收口**（P0 主路径 + 错题本 VB + 离线提示 SY-03 本地）。
 - 设计文档（`docs/01`–`06`）已冻结；Android 多模块工程自 M1 起落地（见 `docs/06-roadmap-acceptance.md` §2）。
-- 模块：`app` / `core:{domain,speech,llm,data,designsystem}` / `feature:conversation`。
-- 本切片可用路径：首页选 Hometown → 自由对话（按住说话 + 延迟芯片）→ 结束会话 → EV 报告 → 收藏错题 → 档案今日统计。
+- 模块：`app` / `core:{domain,speech,llm,data,designsystem}` / `feature:{conversation,drill}`。
 - 本地构建：`source /home/box/android-env.sh`（或自备 SDK）后执行 `./gradlew :app:assembleDebug`。
 - **切勿提交** `local.properties`、API Key、keystore 或录音文件。
 - **密钥安全（ST-01）**：LLM `apiKey` 仅经 **Android Keystore AES/GCM** 封装后落盘（ciphertext 在私有 SharedPreferences）；`baseUrl` / `model` 可明文存 DataStore。不使用已停维护的 `security-crypto` EncryptedSharedPreferences。升级后若设备上仍有旧版 DataStore 明文 `api_key`，会一次性迁入 Keystore 并清除明文。
+
+### 当前可真机验证的 MVP 范围
+
+- [x] 首次引导 + 麦克风权限门闸（onboarding / mic gate）
+- [x] 设置 LLM（Base URL / Model / Keystore 加密 Key）
+- [x] 自由对话 CV（按住说话 → ASR → LLM 流式 → TTS）+ 结束会话 EV 报告
+- [x] Part 1 / Part 2 / Part 3 模拟口试 + 完整模考（结束后统一 EV）
+- [x] 语法句式 GR（列表 → 产出判定 → 可收藏错题）
+- [x] EV 报告回放本地录音 + 一键收藏错题（VB-01）
+- [x] 错题本列表 / 详情（原文 · 修正 · 为什么 · 维度；可标记已掌握）（VB-02）
+- [x] 档案今日统计 / 四维趋势（PF）
+- [x] 网络/LLM 失败中文提示（断网、超时、401、429、5xx）；可结束会话并保留本地轮次与录音（SY-03 本地）
+- [ ] 端云同步 / Key 代理（后期）
+- [ ] 错题重练转 GR、语料收藏、Barge-in（P1+）
 
 ### 延迟冒烟（LatencySmoke）
 
