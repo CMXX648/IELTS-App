@@ -109,6 +109,12 @@ fun ConversationScreen(
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary,
                 )
+                if (state.recording) {
+                    AssistChip(
+                        onClick = {},
+                        label = { Text("● 本地录音中（不上传）") },
+                    )
+                }
                 state.error?.let {
                     Text(text = it, color = MaterialTheme.colorScheme.error)
                 }

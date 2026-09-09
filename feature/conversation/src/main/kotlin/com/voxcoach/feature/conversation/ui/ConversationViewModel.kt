@@ -26,6 +26,7 @@ import com.voxcoach.core.domain.repository.TopicRepository
 import com.voxcoach.core.domain.repository.TurnRepository
 import com.voxcoach.core.domain.settings.LlmSettingsRepository
 import com.voxcoach.core.domain.speech.AsrEngine
+import com.voxcoach.core.domain.speech.SessionAudioCapture
 import com.voxcoach.core.domain.speech.TtsEngine
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.util.UUID
@@ -49,6 +50,7 @@ class ConversationViewModel @Inject constructor(
     private val evRepository: EvRepository,
     private val topicRepository: TopicRepository,
     private val profileRepository: ProfileRepository,
+    private val sessionAudioCapture: SessionAudioCapture,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -66,6 +68,8 @@ class ConversationViewModel @Inject constructor(
     private var sessionStartedAt: Long = System.currentTimeMillis()
     private var turnSeq: Int = 0
     private var sessionCreated = false
+    private var audioPath: String? = null
+    private var listenStartedMs: Long? = null
 
     init {
         viewModelScope.launch {
@@ -91,27 +95,66 @@ class ConversationViewModel @Inject constructor(
         }
     }
 
+    private fun baseSession(
+        status: SessionStatus,
+        endedAt: Long? = null,
+        durationMs: Long = 0,
+        turnCount: Int = _uiState.value.turnCount,
+        evId: String? = null,
+        updatedAt: Long = System.currentTimeMillis(),
+    ): Session = Session(
+        id = sessionId,
+        type = SessionType.CONVERSATION,
+        subtype = SessionSubtype.FREE,
+        topicId = topicIdArg,
+        startedAt = sessionStartedAt,
+        endedAt = endedAt,
+        durationMs = durationMs,
+        turnCount = turnCount,
+        audioPath = audioPath,
+        evId = evId,
+        status = status,
+        updatedAt = updatedAt,
+    )
+
     private suspend fun ensureSession() {
         if (sessionCreated) return
         val existing = sessionRepository.get(sessionId)
         if (existing == null) {
             sessionStartedAt = System.currentTimeMillis()
-            sessionRepository.create(
-                Session(
-                    id = sessionId,
-                    type = SessionType.CONVERSATION,
-                    subtype = SessionSubtype.FREE,
-                    topicId = topicIdArg,
-                    startedAt = sessionStartedAt,
-                    status = SessionStatus.ACTIVE,
-                ),
-            )
+            sessionRepository.create(baseSession(status = SessionStatus.ACTIVE))
+            startLocalRecording()
         } else {
             sessionStartedAt = existing.startedAt
             turnSeq = existing.turnCount
+            audioPath = existing.audioPath
+            if (existing.status == SessionStatus.ACTIVE && !sessionAudioCapture.isRecording) {
+                startLocalRecording()
+            }
         }
         sessionCreated = true
-        _uiState.update { it.copy(sessionId = sessionId) }
+        _uiState.update {
+            it.copy(
+                sessionId = sessionId,
+                recording = sessionAudioCapture.isRecording,
+            )
+        }
+    }
+
+    private suspend fun startLocalRecording() {
+        runCatching {
+            val path = sessionAudioCapture.start(sessionId)
+            audioPath = path
+            sessionRepository.update(baseSession(status = SessionStatus.ACTIVE))
+            _uiState.update { it.copy(recording = true, audioPath = path) }
+        }.onFailure { e ->
+            _uiState.update {
+                it.copy(
+                    recording = false,
+                    error = "本地录音未启动：${e.message ?: "未知错误"}（对话仍可继续）",
+                )
+            }
+        }
     }
 
     fun onMicPressed() {
@@ -119,6 +162,7 @@ class ConversationViewModel @Inject constructor(
         pipelineJob?.cancel()
         listenJob?.cancel()
         viewModelScope.launch { ttsEngine.stopAll() }
+        listenStartedMs = if (sessionAudioCapture.isRecording) sessionAudioCapture.elapsedMs() else null
         _uiState.update {
             it.copy(
                 phase = ConversationUiState.Phase.Listening,
@@ -152,6 +196,7 @@ class ConversationViewModel @Inject constructor(
             if (text.isNotBlank() && current.phase == ConversationUiState.Phase.Listening) {
                 onUserFinal(text)
             } else if (text.isBlank() && current.phase == ConversationUiState.Phase.Listening) {
+                listenStartedMs = null
                 _uiState.update {
                     it.copy(
                         phase = ConversationUiState.Phase.Idle,
@@ -174,6 +219,14 @@ class ConversationViewModel @Inject constructor(
             return
         }
         val asrFinalAt = System.currentTimeMillis()
+        val turnStartMs = listenStartedMs
+            ?: if (sessionAudioCapture.isRecording) sessionAudioCapture.elapsedMs() else asrFinalAt - sessionStartedAt
+        val turnEndMs = if (sessionAudioCapture.isRecording) {
+            sessionAudioCapture.elapsedMs()
+        } else {
+            asrFinalAt - sessionStartedAt
+        }
+        listenStartedMs = null
         _uiState.update {
             it.copy(
                 finalTranscript = trimmed,
@@ -203,8 +256,8 @@ class ConversationViewModel @Inject constructor(
                     text = trimmed,
                     textSource = TextSource.ASR_RAW,
                     seq = turnSeq,
-                    startMs = asrFinalAt - sessionStartedAt,
-                    endMs = asrFinalAt - sessionStartedAt,
+                    startMs = turnStartMs,
+                    endMs = turnEndMs,
                 )
                 pendingTurns += userTurn
                 turnRepository.insert(userTurn)
@@ -240,6 +293,11 @@ class ConversationViewModel @Inject constructor(
                 val full = sb.toString().trim()
                 history += ChatMessage(ChatMessage.Role.ASSISTANT, full)
                 turnSeq += 1
+                val aiStart = if (sessionAudioCapture.isRecording) {
+                    sessionAudioCapture.elapsedMs()
+                } else {
+                    System.currentTimeMillis() - sessionStartedAt
+                }
                 val aiTurn = Turn(
                     id = UUID.randomUUID().toString(),
                     sessionId = sessionId,
@@ -247,22 +305,17 @@ class ConversationViewModel @Inject constructor(
                     text = full,
                     textSource = TextSource.EDITED,
                     seq = turnSeq,
-                    startMs = System.currentTimeMillis() - sessionStartedAt,
+                    startMs = aiStart,
+                    endMs = aiStart,
                 )
                 pendingTurns += aiTurn
                 turnRepository.insert(aiTurn)
 
                 val userTurnPairs = pendingTurns.count { it.role == TurnRole.USER }
                 sessionRepository.update(
-                    Session(
-                        id = sessionId,
-                        type = SessionType.CONVERSATION,
-                        subtype = SessionSubtype.FREE,
-                        topicId = topicIdArg,
-                        startedAt = sessionStartedAt,
-                        turnCount = userTurnPairs,
+                    baseSession(
                         status = SessionStatus.ACTIVE,
-                        updatedAt = System.currentTimeMillis(),
+                        turnCount = userTurnPairs,
                     ),
                 )
 
@@ -313,21 +366,20 @@ class ConversationViewModel @Inject constructor(
             runCatching {
                 ttsEngine.stopAll()
                 ensureSession()
+                val path = sessionAudioCapture.stop()
+                if (path != null) audioPath = path
+                _uiState.update { it.copy(recording = false, audioPath = audioPath) }
+
                 val endedAt = System.currentTimeMillis()
                 val duration = endedAt - sessionStartedAt
                 val turns = turnRepository.listForSession(sessionId).ifEmpty { pendingTurns.toList() }
                 val userCount = turns.count { it.role == TurnRole.USER }
                 sessionRepository.update(
-                    Session(
-                        id = sessionId,
-                        type = SessionType.CONVERSATION,
-                        subtype = SessionSubtype.FREE,
-                        topicId = topicIdArg,
-                        startedAt = sessionStartedAt,
+                    baseSession(
+                        status = SessionStatus.EVALUATING,
                         endedAt = endedAt,
                         durationMs = duration,
                         turnCount = userCount,
-                        status = SessionStatus.EVALUATING,
                         updatedAt = endedAt,
                     ),
                 )
@@ -353,18 +405,12 @@ class ConversationViewModel @Inject constructor(
                 val ev = EvJsonParser.parse(evRaw, sessionId = sessionId, evId = evId)
                 evRepository.save(ev)
                 sessionRepository.update(
-                    Session(
-                        id = sessionId,
-                        type = SessionType.CONVERSATION,
-                        subtype = SessionSubtype.FREE,
-                        topicId = topicIdArg,
-                        startedAt = sessionStartedAt,
+                    baseSession(
+                        status = SessionStatus.DONE,
                         endedAt = endedAt,
                         durationMs = duration,
                         turnCount = userCount,
                         evId = evId,
-                        status = SessionStatus.DONE,
-                        updatedAt = System.currentTimeMillis(),
                     ),
                 )
                 profileRepository.addPractice(durationMs = duration, turnCount = userCount)
@@ -379,9 +425,11 @@ class ConversationViewModel @Inject constructor(
                     )
                 }
             }.onFailure { e ->
+                runCatching { sessionAudioCapture.stop() }
                 _uiState.update {
                     it.copy(
                         ending = false,
+                        recording = false,
                         phase = ConversationUiState.Phase.Idle,
                         error = e.message ?: "评测失败",
                         statusMessage = "评测失败，可稍后重试结束会话",
@@ -393,6 +441,11 @@ class ConversationViewModel @Inject constructor(
 
     fun consumeNavigation() {
         _uiState.update { it.copy(navigateToReportSessionId = null) }
+    }
+
+    override fun onCleared() {
+        runCatching { sessionAudioCapture.release() }
+        super.onCleared()
     }
 
     companion object {
