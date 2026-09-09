@@ -31,6 +31,8 @@ import com.voxcoach.app.ui.home.HomeScreen
 import com.voxcoach.app.ui.onboarding.OnboardingScreen
 import com.voxcoach.app.ui.profile.ProfileScreen
 import com.voxcoach.app.ui.report.ReportScreen
+import com.voxcoach.app.ui.vault.VaultDetailRoute
+import com.voxcoach.app.ui.vault.VaultListRoute
 import com.voxcoach.core.domain.settings.OnboardingRepository
 import com.voxcoach.feature.conversation.ui.ConversationRoute
 import com.voxcoach.feature.conversation.ui.part1.Part1Route
@@ -59,10 +61,13 @@ object Routes {
     const val DebugSmoke = "debug/smoke"
     const val DrillList = "drill"
     const val Drill = "drill/{pointId}"
+    const val Vault = "vault"
+    const val VaultDetail = "vault/{mistakeId}"
 
     fun conversation(topicId: String) = "conversation/$topicId"
     fun report(sessionId: String) = "report/$sessionId"
     fun drill(pointId: String) = "drill/$pointId"
+    fun vaultDetail(mistakeId: String) = "vault/$mistakeId"
 }
 
 private data class Tab(val route: String, val label: String, val icon: ImageVector)
@@ -147,6 +152,7 @@ fun VoxNavHost(
                     onStartPart3 = { navController.navigate(Routes.Part3Mock) },
                     onStartFullMock = { navController.navigate(Routes.FullMock) },
                     onOpenGrammar = { navController.navigate(Routes.DrillList) },
+                    onOpenVault = { navController.navigate(Routes.Vault) },
                     onOpenDebug = { navController.navigate(Routes.DebugSmoke) },
                     onOpenSettings = { navController.navigate(Routes.Settings) },
                 )
@@ -190,6 +196,19 @@ fun VoxNavHost(
                         }
                     },
                 )
+            }
+
+            composable(Routes.Vault) {
+                VaultListRoute(
+                    onBack = { navController.popBackStack() },
+                    onOpenDetail = { id -> navController.navigate(Routes.vaultDetail(id)) },
+                )
+            }
+            composable(
+                route = Routes.VaultDetail,
+                arguments = listOf(navArgument("mistakeId") { type = NavType.StringType }),
+            ) {
+                VaultDetailRoute(onBack = { navController.popBackStack() })
             }
             composable(Routes.DrillList) {
                 DrillListRoute(

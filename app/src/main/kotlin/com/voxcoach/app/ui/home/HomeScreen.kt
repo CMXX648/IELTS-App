@@ -61,6 +61,7 @@ fun HomeScreen(
     onStartPart3: () -> Unit = {},
     onStartFullMock: () -> Unit = {},
     onOpenGrammar: () -> Unit = {},
+    onOpenVault: () -> Unit = {},
     onOpenDebug: () -> Unit,
     onOpenSettings: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
@@ -357,6 +358,25 @@ fun HomeScreen(
                     Spacer(Modifier.height(8.dp))
                     Button(onClick = onOpenGrammar, modifier = Modifier.fillMaxWidth()) {
                         Text("进入语法练习")
+                    }
+                }
+            }
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .combinedClickable(onClick = onOpenVault),
+            ) {
+                Column(Modifier.padding(16.dp)) {
+                    Text("错题本", style = MaterialTheme.typography.titleLarge)
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "查看已收藏错题：原文、修正、原因与维度（VB-01/02）",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Button(onClick = onOpenVault, modifier = Modifier.fillMaxWidth()) {
+                        Text("打开错题本")
                     }
                 }
             }
