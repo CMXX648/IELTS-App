@@ -16,6 +16,7 @@ import com.voxcoach.core.data.repo.SessionRepositoryImpl
 import com.voxcoach.core.data.repo.TopicRepositoryImpl
 import com.voxcoach.core.data.repo.TurnRepositoryImpl
 import com.voxcoach.core.data.settings.DataStoreLlmSettingsRepository
+import com.voxcoach.core.data.settings.DataStoreOnboardingRepository
 import com.voxcoach.core.domain.repository.EvRepository
 import com.voxcoach.core.domain.repository.MistakeRepository
 import com.voxcoach.core.domain.repository.ProfileRepository
@@ -23,6 +24,7 @@ import com.voxcoach.core.domain.repository.SessionRepository
 import com.voxcoach.core.domain.repository.TopicRepository
 import com.voxcoach.core.domain.repository.TurnRepository
 import com.voxcoach.core.domain.settings.LlmSettingsRepository
+import com.voxcoach.core.domain.settings.OnboardingRepository
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -40,6 +42,9 @@ import kotlinx.coroutines.launch
 abstract class DataBindModule {
     @Binds @Singleton
     abstract fun bindSettings(impl: DataStoreLlmSettingsRepository): LlmSettingsRepository
+
+    @Binds @Singleton
+    abstract fun bindOnboarding(impl: DataStoreOnboardingRepository): OnboardingRepository
 
     @Binds @Singleton
     abstract fun bindTopic(impl: TopicRepositoryImpl): TopicRepository
