@@ -52,7 +52,8 @@ object EvJsonParser {
             items = items,
             highlights = highlights,
             engineVer = dto.engine?.model ?: "unknown",
-            promptVer = dto.schemaVer ?: dto.engine?.promptVer ?: "ev.v1",
+            // Prefer engine.promptVer (rubric id); schemaVer is the JSON contract id.
+            promptVer = dto.engine?.promptVer ?: dto.schemaVer ?: "ev.v1",
             createdAt = System.currentTimeMillis(),
         )
     }
