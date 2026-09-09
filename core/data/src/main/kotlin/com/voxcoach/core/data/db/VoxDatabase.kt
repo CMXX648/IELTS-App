@@ -6,13 +6,17 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.voxcoach.core.data.db.dao.DrillAttemptDao
 import com.voxcoach.core.data.db.dao.EvDao
+import com.voxcoach.core.data.db.dao.GrammarPointDao
 import com.voxcoach.core.data.db.dao.MistakeDao
 import com.voxcoach.core.data.db.dao.ProfileDao
 import com.voxcoach.core.data.db.dao.SessionDao
 import com.voxcoach.core.data.db.dao.TopicDao
 import com.voxcoach.core.data.db.dao.TurnDao
+import com.voxcoach.core.data.db.entity.DrillAttemptEntity
 import com.voxcoach.core.data.db.entity.EvResultEntity
+import com.voxcoach.core.data.db.entity.GrammarPointEntity
 import com.voxcoach.core.data.db.entity.FeedbackItemEntity
 import com.voxcoach.core.data.db.entity.MistakeEntity
 import com.voxcoach.core.data.db.entity.SessionEntity
@@ -29,6 +33,8 @@ import com.voxcoach.core.data.db.entity.UserProfileEntity
         FeedbackItemEntity::class,
         MistakeEntity::class,
         UserProfileEntity::class,
+        GrammarPointEntity::class,
+        DrillAttemptEntity::class,
     ],
     version = VoxDatabase.SCHEMA_VERSION,
     exportSchema = false,
@@ -41,9 +47,11 @@ abstract class VoxDatabase : RoomDatabase() {
     abstract fun evDao(): EvDao
     abstract fun mistakeDao(): MistakeDao
     abstract fun profileDao(): ProfileDao
+    abstract fun grammarPointDao(): GrammarPointDao
+    abstract fun drillAttemptDao(): DrillAttemptDao
 
     companion object {
-        const val SCHEMA_VERSION = 1
+        const val SCHEMA_VERSION = 2
         const val NAME = "voxcoach.db"
 
         fun build(context: Context): VoxDatabase =
@@ -79,10 +87,14 @@ object TopicSeeds {
 class SeedRunner(
     private val topicDao: TopicDao,
     private val profileDao: ProfileDao,
+    private val grammarPointDao: GrammarPointDao,
 ) {
     suspend fun ensureSeeded() {
         if (topicDao.count() == 0) {
             topicDao.insertAll(TopicSeeds.all())
+        }
+        if (grammarPointDao.count() == 0) {
+            grammarPointDao.insertAll(GrammarSeeds.all())
         }
         if (profileDao.get() == null) {
             profileDao.upsert(

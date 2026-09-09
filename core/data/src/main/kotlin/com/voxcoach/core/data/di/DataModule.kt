@@ -3,13 +3,17 @@ package com.voxcoach.core.data.di
 import android.content.Context
 import com.voxcoach.core.data.db.SeedRunner
 import com.voxcoach.core.data.db.VoxDatabase
+import com.voxcoach.core.data.db.dao.DrillAttemptDao
 import com.voxcoach.core.data.db.dao.EvDao
+import com.voxcoach.core.data.db.dao.GrammarPointDao
 import com.voxcoach.core.data.db.dao.MistakeDao
 import com.voxcoach.core.data.db.dao.ProfileDao
 import com.voxcoach.core.data.db.dao.SessionDao
 import com.voxcoach.core.data.db.dao.TopicDao
 import com.voxcoach.core.data.db.dao.TurnDao
+import com.voxcoach.core.data.repo.DrillAttemptRepositoryImpl
 import com.voxcoach.core.data.repo.EvRepositoryImpl
+import com.voxcoach.core.data.repo.GrammarPointRepositoryImpl
 import com.voxcoach.core.data.repo.MistakeRepositoryImpl
 import com.voxcoach.core.data.repo.ProfileRepositoryImpl
 import com.voxcoach.core.data.repo.SessionRepositoryImpl
@@ -17,7 +21,9 @@ import com.voxcoach.core.data.repo.TopicRepositoryImpl
 import com.voxcoach.core.data.repo.TurnRepositoryImpl
 import com.voxcoach.core.data.settings.DataStoreLlmSettingsRepository
 import com.voxcoach.core.data.settings.DataStoreOnboardingRepository
+import com.voxcoach.core.domain.repository.DrillAttemptRepository
 import com.voxcoach.core.domain.repository.EvRepository
+import com.voxcoach.core.domain.repository.GrammarPointRepository
 import com.voxcoach.core.domain.repository.MistakeRepository
 import com.voxcoach.core.domain.repository.ProfileRepository
 import com.voxcoach.core.domain.repository.SessionRepository
@@ -63,6 +69,12 @@ abstract class DataBindModule {
 
     @Binds @Singleton
     abstract fun bindProfile(impl: ProfileRepositoryImpl): ProfileRepository
+
+    @Binds @Singleton
+    abstract fun bindGrammarPoint(impl: GrammarPointRepositoryImpl): GrammarPointRepository
+
+    @Binds @Singleton
+    abstract fun bindDrillAttempt(impl: DrillAttemptRepositoryImpl): DrillAttemptRepository
 }
 
 @Module
@@ -79,15 +91,18 @@ object DataProvideModule {
     @Provides fun provideEvDao(db: VoxDatabase): EvDao = db.evDao()
     @Provides fun provideMistakeDao(db: VoxDatabase): MistakeDao = db.mistakeDao()
     @Provides fun provideProfileDao(db: VoxDatabase): ProfileDao = db.profileDao()
+    @Provides fun provideGrammarPointDao(db: VoxDatabase): GrammarPointDao = db.grammarPointDao()
+    @Provides fun provideDrillAttemptDao(db: VoxDatabase): DrillAttemptDao = db.drillAttemptDao()
 
     @Provides
     @Singleton
     fun provideSeedRunner(
         topicDao: TopicDao,
         profileDao: ProfileDao,
+        grammarPointDao: GrammarPointDao,
         db: VoxDatabase,
     ): SeedRunner {
-        val runner = SeedRunner(topicDao, profileDao)
+        val runner = SeedRunner(topicDao, profileDao, grammarPointDao)
         // Eager seed on first open
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             db.openHelper.writableDatabase

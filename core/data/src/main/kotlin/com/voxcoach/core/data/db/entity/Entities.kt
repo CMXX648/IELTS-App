@@ -113,3 +113,33 @@ data class UserProfileEntity(
     val totalSessionCount: Int,
     val updatedAt: Long,
 )
+
+@Entity(tableName = "grammar_points")
+data class GrammarPointEntity(
+    @PrimaryKey val id: String,
+    val code: String,
+    val groupCode: String,
+    val groupTitle: String,
+    val title: String,
+    val titleZh: String,
+    val rule: String,
+    val examplesJson: String,
+    val skeleton: String,
+    val topicHint: String,
+    val sortOrder: Int,
+)
+
+@Entity(
+    tableName = "drill_attempts",
+    indices = [Index("grammarPointId"), Index("triedAt")],
+)
+data class DrillAttemptEntity(
+    @PrimaryKey val id: String,
+    val grammarPointId: String,
+    val promptId: String,
+    val userSentence: String,
+    val hit: Boolean,
+    val feedbackJson: String,
+    val triedAt: Long,
+)
+

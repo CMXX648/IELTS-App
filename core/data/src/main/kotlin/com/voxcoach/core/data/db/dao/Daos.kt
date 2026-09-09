@@ -5,7 +5,9 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import com.voxcoach.core.data.db.entity.DrillAttemptEntity
 import com.voxcoach.core.data.db.entity.EvResultEntity
+import com.voxcoach.core.data.db.entity.GrammarPointEntity
 import com.voxcoach.core.data.db.entity.FeedbackItemEntity
 import com.voxcoach.core.data.db.entity.MistakeEntity
 import com.voxcoach.core.data.db.entity.SessionEntity
@@ -132,3 +134,34 @@ interface ProfileDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(profile: UserProfileEntity)
 }
+
+@Dao
+interface GrammarPointDao {
+    @Query("SELECT * FROM grammar_points ORDER BY sortOrder ASC")
+    fun observeAll(): Flow<List<GrammarPointEntity>>
+
+    @Query("SELECT * FROM grammar_points WHERE id = :id LIMIT 1")
+    suspend fun get(id: String): GrammarPointEntity?
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertAll(points: List<GrammarPointEntity>)
+
+    @Query("SELECT COUNT(*) FROM grammar_points")
+    suspend fun count(): Int
+}
+
+@Dao
+interface DrillAttemptDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(attempt: DrillAttemptEntity)
+
+    @Query(
+        """
+        SELECT * FROM drill_attempts
+        WHERE grammarPointId = :grammarPointId
+        ORDER BY triedAt DESC LIMIT :limit
+        """,
+    )
+    suspend fun listForPoint(grammarPointId: String, limit: Int): List<DrillAttemptEntity>
+}
+
