@@ -1,7 +1,9 @@
 package com.voxcoach.core.data.repo
 
 import com.voxcoach.core.data.db.SeedRunner
+import com.voxcoach.core.data.db.dao.DrillAttemptDao
 import com.voxcoach.core.data.db.dao.EvDao
+import com.voxcoach.core.data.db.dao.GrammarPointDao
 import com.voxcoach.core.data.db.dao.MistakeDao
 import com.voxcoach.core.data.db.dao.ProfileDao
 import com.voxcoach.core.data.db.dao.SessionDao
@@ -9,7 +11,9 @@ import com.voxcoach.core.data.db.dao.TopicDao
 import com.voxcoach.core.data.db.dao.TurnDao
 import com.voxcoach.core.data.db.toDomain
 import com.voxcoach.core.data.db.toEntity
+import com.voxcoach.core.domain.model.DrillAttempt
 import com.voxcoach.core.domain.model.EvResult
+import com.voxcoach.core.domain.model.GrammarPoint
 import com.voxcoach.core.domain.model.FeedbackItem
 import com.voxcoach.core.domain.model.Mistake
 import com.voxcoach.core.domain.model.Session
@@ -17,7 +21,9 @@ import com.voxcoach.core.domain.model.TodayStats
 import com.voxcoach.core.domain.model.Topic
 import com.voxcoach.core.domain.model.Turn
 import com.voxcoach.core.domain.model.UserProfile
+import com.voxcoach.core.domain.repository.DrillAttemptRepository
 import com.voxcoach.core.domain.repository.EvRepository
+import com.voxcoach.core.domain.repository.GrammarPointRepository
 import com.voxcoach.core.domain.repository.MistakeRepository
 import com.voxcoach.core.domain.repository.ProfileRepository
 import com.voxcoach.core.domain.repository.SessionRepository
@@ -138,3 +144,33 @@ class ProfileRepositoryImpl @Inject constructor(
         profileDao.upsert(updated.toEntity())
     }
 }
+
+@Singleton
+class GrammarPointRepositoryImpl @Inject constructor(
+    private val grammarPointDao: GrammarPointDao,
+    private val seedRunner: SeedRunner,
+) : GrammarPointRepository {
+    override fun observeAll(): Flow<List<GrammarPoint>> =
+        grammarPointDao.observeAll().map { list -> list.map { it.toDomain() } }
+
+    override suspend fun get(id: String): GrammarPoint? {
+        seedRunner.ensureSeeded()
+        return grammarPointDao.get(id)?.toDomain()
+    }
+
+    override suspend fun ensureSeeded() {
+        seedRunner.ensureSeeded()
+    }
+}
+
+@Singleton
+class DrillAttemptRepositoryImpl @Inject constructor(
+    private val drillAttemptDao: DrillAttemptDao,
+) : DrillAttemptRepository {
+    override suspend fun insert(attempt: DrillAttempt) =
+        drillAttemptDao.insert(attempt.toEntity())
+
+    override suspend fun listForPoint(grammarPointId: String, limit: Int): List<DrillAttempt> =
+        drillAttemptDao.listForPoint(grammarPointId, limit).map { it.toDomain() }
+}
+

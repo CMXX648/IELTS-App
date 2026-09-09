@@ -24,18 +24,45 @@ class MockLlmClient(
 
     override suspend fun complete(request: ChatRequest): ChatResult {
         val joined = request.messages.joinToString("\n") { it.content }
+        val isJudge = joined.contains("Judge now") ||
+            joined.contains("Target grammar") ||
+            request.messages.any { it.role.name == "SYSTEM" && it.content.contains("grammar coach") }
         val isEv = joined.contains("schemaVer") ||
             joined.contains("Evaluate now") ||
             joined.contains("overallBand") ||
             request.messages.any { it.role.name == "SYSTEM" && it.content.contains("Score the candidate") }
-        return if (isEv) {
-            ChatResult(content = SAMPLE_EV_JSON, finishReason = "stop")
-        } else {
-            ChatResult(content = reply, finishReason = "stop")
+        return when {
+            isJudge -> {
+                val miss = joined.contains("I go yesterday") || joined.contains("FORCE_MISS")
+                ChatResult(
+                    content = if (miss) SAMPLE_JUDGE_MISS else SAMPLE_JUDGE_HIT,
+                    finishReason = "stop",
+                )
+            }
+            isEv -> ChatResult(content = SAMPLE_EV_JSON, finishReason = "stop")
+            else -> ChatResult(content = reply, finishReason = "stop")
         }
     }
 
     companion object {
+        val SAMPLE_JUDGE_HIT = """
+{
+  "hit": true,
+  "correction": "",
+  "why": "结构命中，时态与虚拟一致。",
+  "model": "If I had more free time, I would travel more often."
+}
+""".trimIndent()
+
+        val SAMPLE_JUDGE_MISS = """
+{
+  "hit": false,
+  "correction": "If I had prepared earlier, I would have felt calmer.",
+  "why": "目标是第三条件句（If + had + V3, would have + V3），原句未使用该结构。",
+  "model": "If I had prepared earlier, I would have felt calmer."
+}
+""".trimIndent()
+
         val SAMPLE_EV_JSON = """
 {
   "schemaVer": "ev.v1",

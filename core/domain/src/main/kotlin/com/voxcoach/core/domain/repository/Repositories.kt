@@ -1,7 +1,9 @@
 package com.voxcoach.core.domain.repository
 
 import com.voxcoach.core.domain.model.EvResult
+import com.voxcoach.core.domain.model.DrillAttempt
 import com.voxcoach.core.domain.model.FeedbackItem
+import com.voxcoach.core.domain.model.GrammarPoint
 import com.voxcoach.core.domain.model.Mistake
 import com.voxcoach.core.domain.model.Session
 import com.voxcoach.core.domain.model.TodayStats
@@ -49,3 +51,15 @@ interface ProfileRepository {
     suspend fun get(): UserProfile
     suspend fun addPractice(durationMs: Long, turnCount: Int)
 }
+
+interface GrammarPointRepository {
+    fun observeAll(): Flow<List<GrammarPoint>>
+    suspend fun get(id: String): GrammarPoint?
+    suspend fun ensureSeeded()
+}
+
+interface DrillAttemptRepository {
+    suspend fun insert(attempt: DrillAttempt)
+    suspend fun listForPoint(grammarPointId: String, limit: Int = 20): List<DrillAttempt>
+}
+

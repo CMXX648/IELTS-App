@@ -1,6 +1,8 @@
 package com.voxcoach.core.data.db
 
+import com.voxcoach.core.data.db.entity.DrillAttemptEntity
 import com.voxcoach.core.data.db.entity.EvResultEntity
+import com.voxcoach.core.data.db.entity.GrammarPointEntity
 import com.voxcoach.core.data.db.entity.FeedbackItemEntity
 import com.voxcoach.core.data.db.entity.MistakeEntity
 import com.voxcoach.core.data.db.entity.SessionEntity
@@ -9,7 +11,9 @@ import com.voxcoach.core.data.db.entity.TurnEntity
 import com.voxcoach.core.data.db.entity.UserProfileEntity
 import com.voxcoach.core.domain.model.BandDims
 import com.voxcoach.core.domain.model.DimScore
+import com.voxcoach.core.domain.model.DrillAttempt
 import com.voxcoach.core.domain.model.EvResult
+import com.voxcoach.core.domain.model.GrammarPoint
 import com.voxcoach.core.domain.model.FeedbackItem
 import com.voxcoach.core.domain.model.Highlight
 import com.voxcoach.core.domain.model.Mistake
@@ -231,3 +235,38 @@ fun UserProfile.toEntity() = UserProfileEntity(
     totalSessionCount = totalSessionCount,
     updatedAt = updatedAt,
 )
+
+fun GrammarPointEntity.toDomain() = GrammarPoint(
+    id = id,
+    code = code,
+    groupCode = groupCode,
+    groupTitle = groupTitle,
+    title = title,
+    titleZh = titleZh,
+    rule = rule,
+    examplesJson = examplesJson,
+    skeleton = skeleton,
+    topicHint = topicHint,
+    sortOrder = sortOrder,
+)
+
+fun DrillAttempt.toEntity() = DrillAttemptEntity(
+    id = id,
+    grammarPointId = grammarPointId,
+    promptId = promptId,
+    userSentence = userSentence,
+    hit = hit,
+    feedbackJson = feedbackJson,
+    triedAt = triedAt,
+)
+
+fun DrillAttemptEntity.toDomain() = DrillAttempt(
+    id = id,
+    grammarPointId = grammarPointId,
+    promptId = promptId,
+    userSentence = userSentence,
+    hit = hit,
+    feedbackJson = feedbackJson,
+    triedAt = triedAt,
+)
+

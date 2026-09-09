@@ -56,6 +56,7 @@ class HomeViewModel @Inject constructor(
 @Composable
 fun HomeScreen(
     onStartConversation: (topicId: String) -> Unit,
+    onOpenGrammar: () -> Unit = {},
     onOpenDebug: () -> Unit,
     onOpenSettings: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
@@ -173,6 +174,25 @@ fun HomeScreen(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .combinedClickable(onClick = onOpenGrammar),
+            ) {
+                Column(Modifier.padding(16.dp)) {
+                    Text("语法句式", style = MaterialTheme.typography.titleLarge)
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "口头产出目标句式，AI 判定命中与纠错（GR-01/02/03）",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Button(onClick = onOpenGrammar, modifier = Modifier.fillMaxWidth()) {
+                        Text("进入语法练习")
+                    }
+                }
+            }
             if (!hasMic()) {
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(12.dp)) {

@@ -33,6 +33,8 @@ import com.voxcoach.app.ui.profile.ProfileScreen
 import com.voxcoach.app.ui.report.ReportScreen
 import com.voxcoach.core.domain.settings.OnboardingRepository
 import com.voxcoach.feature.conversation.ui.ConversationRoute
+import com.voxcoach.feature.drill.ui.DrillListRoute
+import com.voxcoach.feature.drill.ui.DrillRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
@@ -47,9 +49,12 @@ object Routes {
     const val Profile = "profile"
     const val Settings = "settings"
     const val DebugSmoke = "debug/smoke"
+    const val DrillList = "drill"
+    const val Drill = "drill/{pointId}"
 
     fun conversation(topicId: String) = "conversation/$topicId"
     fun report(sessionId: String) = "report/$sessionId"
+    fun drill(pointId: String) = "drill/$pointId"
 }
 
 private data class Tab(val route: String, val label: String, val icon: ImageVector)
@@ -129,9 +134,24 @@ fun VoxNavHost(
                     onStartConversation = { topicId ->
                         navController.navigate(Routes.conversation(topicId))
                     },
+                    onOpenGrammar = { navController.navigate(Routes.DrillList) },
                     onOpenDebug = { navController.navigate(Routes.DebugSmoke) },
                     onOpenSettings = { navController.navigate(Routes.Settings) },
                 )
+            }
+            composable(Routes.DrillList) {
+                DrillListRoute(
+                    onBack = { navController.popBackStack() },
+                    onOpenDrill = { pointId ->
+                        navController.navigate(Routes.drill(pointId))
+                    },
+                )
+            }
+            composable(
+                route = Routes.Drill,
+                arguments = listOf(navArgument("pointId") { type = NavType.StringType }),
+            ) {
+                DrillRoute(onBack = { navController.popBackStack() })
             }
             composable(
                 route = Routes.Conversation,
