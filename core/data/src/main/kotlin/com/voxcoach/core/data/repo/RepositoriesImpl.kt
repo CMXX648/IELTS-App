@@ -9,10 +9,12 @@ import com.voxcoach.core.data.db.dao.ProfileDao
 import com.voxcoach.core.data.db.dao.SessionDao
 import com.voxcoach.core.data.db.dao.TopicDao
 import com.voxcoach.core.data.db.dao.TurnDao
+import com.voxcoach.core.data.db.toBandDims
 import com.voxcoach.core.data.db.toDomain
 import com.voxcoach.core.data.db.toEntity
 import com.voxcoach.core.domain.model.DrillAttempt
 import com.voxcoach.core.domain.model.EvResult
+import com.voxcoach.core.domain.pf.EvScoreSnapshot
 import com.voxcoach.core.domain.model.GrammarPoint
 import com.voxcoach.core.domain.model.FeedbackItem
 import com.voxcoach.core.domain.model.Mistake
@@ -99,6 +101,21 @@ class EvRepositoryImpl @Inject constructor(
         return entity.toDomain(items)
     }
 
+    override suspend fun listRecentScores(limit: Int): List<EvScoreSnapshot> =
+        evDao.listRecent(limit).map { entity ->
+            val dims = entity.dimsJson.toBandDims()
+            EvScoreSnapshot(
+                id = entity.id,
+                sessionId = entity.sessionId,
+                createdAt = entity.createdAt,
+                overallBand = entity.overallBand,
+                fc = dims.fc.score,
+                lr = dims.lr.score,
+                gra = dims.gra.score,
+                p = dims.p.score,
+            )
+        }
+
     override suspend fun listFeedback(evId: String): List<FeedbackItem> =
         evDao.listItems(evId).map { it.toDomain() }
 
@@ -139,6 +156,16 @@ class ProfileRepositoryImpl @Inject constructor(
             totalTurnCount = current.totalTurnCount + turnCount,
             totalSessionCount = current.totalSessionCount + 1,
             streak = current.streak + 1,
+            updatedAt = System.currentTimeMillis(),
+        )
+        profileDao.upsert(updated.toEntity())
+    }
+
+    override suspend fun updateDimTrendCache(cacheJson: String) {
+        seedRunner.ensureSeeded()
+        val current = profileDao.get()?.toDomain() ?: UserProfile()
+        val updated = current.copy(
+            dimTrendCacheJson = cacheJson,
             updatedAt = System.currentTimeMillis(),
         )
         profileDao.upsert(updated.toEntity())

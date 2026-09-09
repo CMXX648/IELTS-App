@@ -101,6 +101,9 @@ interface EvDao {
     @Query("SELECT * FROM ev_results WHERE id = :id LIMIT 1")
     suspend fun get(id: String): EvResultEntity?
 
+    @Query("SELECT * FROM ev_results ORDER BY createdAt DESC LIMIT :limit")
+    suspend fun listRecent(limit: Int): List<EvResultEntity>
+
     @Query("SELECT * FROM feedback_items WHERE evId = :evId")
     suspend fun listItems(evId: String): List<FeedbackItemEntity>
 
