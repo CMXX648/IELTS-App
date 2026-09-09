@@ -5,6 +5,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,18 +16,22 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,15 +44,22 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConversationRoute(
-    onOpenSettings: () -> Unit,
+    onBack: () -> Unit,
+    onOpenReport: (sessionId: String) -> Unit,
     viewModel: ConversationViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    LaunchedEffect(state.navigateToReportSessionId) {
+        val sid = state.navigateToReportSessionId ?: return@LaunchedEffect
+        viewModel.consumeNavigation()
+        onOpenReport(sid)
+    }
     ConversationScreen(
         state = state,
-        onOpenSettings = onOpenSettings,
+        onBack = onBack,
         onMicPressed = viewModel::onMicPressed,
         onMicReleased = viewModel::onMicReleased,
+        onEndSession = viewModel::endSession,
     )
 }
 
@@ -55,18 +67,26 @@ fun ConversationRoute(
 @Composable
 fun ConversationScreen(
     state: ConversationUiState,
-    onOpenSettings: () -> Unit,
+    onBack: () -> Unit,
     onMicPressed: () -> Unit,
     onMicReleased: () -> Unit,
+    onEndSession: () -> Unit,
 ) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("对话练习 · M1") },
-                actions = {
-                    IconButton(onClick = onOpenSettings) {
-                        Icon(Icons.Default.Settings, contentDescription = "设置")
+                title = { Text("自由对话 · ${state.topicTitle}") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
                     }
+                },
+                actions = {
+                    Text(
+                        text = "第 ${state.turnCount} 轮",
+                        modifier = Modifier.padding(end = 12.dp),
+                        style = MaterialTheme.typography.labelLarge,
+                    )
                 },
             )
         },
@@ -92,8 +112,28 @@ fun ConversationScreen(
                 state.error?.let {
                     Text(text = it, color = MaterialTheme.colorScheme.error)
                 }
+                LatencyChips(state)
                 BubbleCard(title = "你说", body = state.partialTranscript.ifBlank { "…" })
                 BubbleCard(title = "考官", body = state.assistantText.ifBlank { "…" })
+                if (state.phase == ConversationUiState.Phase.Evaluating) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        Text("正在生成四维评测…")
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            OutlinedButton(
+                onClick = onEndSession,
+                enabled = !state.ending && state.phase != ConversationUiState.Phase.Evaluating,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("结束会话")
             }
 
             Spacer(Modifier.height(12.dp))
@@ -103,15 +143,20 @@ fun ConversationScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 val listening = state.phase == ConversationUiState.Phase.Listening
+                val disabled = state.ending || state.phase == ConversationUiState.Phase.Evaluating
                 Box(
                     modifier = Modifier
                         .size(96.dp)
                         .clip(CircleShape)
                         .background(
-                            if (listening) MaterialTheme.colorScheme.error
-                            else MaterialTheme.colorScheme.primary,
+                            when {
+                                disabled -> MaterialTheme.colorScheme.surfaceVariant
+                                listening -> MaterialTheme.colorScheme.error
+                                else -> MaterialTheme.colorScheme.primary
+                            },
                         )
-                        .pointerInput(Unit) {
+                        .pointerInput(disabled) {
+                            if (disabled) return@pointerInput
                             detectTapGestures(
                                 onPress = {
                                     onMicPressed()
@@ -141,6 +186,28 @@ fun ConversationScreen(
                     .padding(top = 8.dp),
             )
         }
+    }
+}
+
+@Composable
+private fun LatencyChips(state: ConversationUiState) {
+    val lat = state.lastLatency ?: return
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        AssistChip(
+            onClick = {},
+            label = { Text("ASR终稿→LLM首字 ${lat.asrToLlmMs?.let { "${it}ms" } ?: "—"}") },
+        )
+        AssistChip(
+            onClick = {},
+            label = { Text("TTS起播 ${lat.llmToTtsMs?.let { "+${it}ms" } ?: "—"}") },
+        )
+        AssistChip(
+            onClick = {},
+            label = { Text("往返 ${lat.asrToTtsMs?.let { "${it}ms" } ?: "—"}") },
+        )
     }
 }
 
