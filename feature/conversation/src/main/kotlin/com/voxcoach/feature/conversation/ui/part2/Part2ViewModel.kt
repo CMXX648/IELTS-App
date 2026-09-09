@@ -39,6 +39,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import com.voxcoach.core.domain.ux.NetworkUx
 
 /**
  * IELTS Part 2 mock (CV-02 P2 slice): examiner intro TTS → cue card → 60s prep →
@@ -143,7 +144,7 @@ class Part2ViewModel @Inject constructor(
                 if (speakPhaseEntered) return@onFailure
                 _uiState.update {
                     it.copy(
-                        error = e.message ?: "Part 2 启动失败",
+                        error = NetworkUx.userMessage(e, "Part 2 启动失败"),
                         statusMessage = "启动失败，可返回重试",
                     )
                 }
@@ -262,7 +263,7 @@ class Part2ViewModel @Inject constructor(
             runCatching { runSpeakPrompt(card) }
                 .onFailure { e ->
                     _uiState.update {
-                        it.copy(error = e.message ?: "进入独白失败")
+                        it.copy(error = NetworkUx.userMessage(e, "进入独白失败"))
                     }
                 }
         }
@@ -339,7 +340,7 @@ class Part2ViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         asrListening = false,
-                        error = e.message ?: "ASR 启动失败（本地录音仍在继续）",
+                        error = NetworkUx.userMessage(e, "ASR 启动失败（本地录音仍在继续）"),
                     )
                 }
             }
@@ -359,7 +360,7 @@ class Part2ViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         asrListening = false,
-                        error = e.message ?: "ASR 重启失败",
+                        error = NetworkUx.userMessage(e, "ASR 重启失败"),
                     )
                 }
             }
@@ -381,7 +382,7 @@ class Part2ViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             phase = Part2UiState.Phase.Speaking,
-                            error = e.message ?: "结束独白失败",
+                            error = NetworkUx.userMessage(e, "结束独白失败"),
                             statusMessage = "结束失败，可再试「说完了」",
                         )
                     }
@@ -503,7 +504,7 @@ class Part2ViewModel @Inject constructor(
                     it.copy(
                         ending = false,
                         recording = false,
-                        error = e.message ?: "评测失败",
+                        error = NetworkUx.userMessage(e, "评测失败"),
                         statusMessage = "评测失败，可稍后重试",
                     )
                 }

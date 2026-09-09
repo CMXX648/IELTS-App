@@ -41,6 +41,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import com.voxcoach.core.domain.ux.NetworkUx
 
 /**
  * Full IELTS Speaking mock: Part1 (5Q) → Part2 (prep+long turn) → Part3 (5Q)
@@ -147,7 +148,7 @@ class FullMockViewModel @Inject constructor(
             }.onFailure { e ->
                 _uiState.update {
                     it.copy(
-                        error = e.message ?: "完整模考启动失败",
+                        error = NetworkUx.userMessage(e, "完整模考启动失败"),
                         statusMessage = "启动失败，可返回重试",
                         phase = FullMockUiState.Phase.AwaitingAnswer,
                     )
@@ -331,7 +332,7 @@ class FullMockViewModel @Inject constructor(
         pipelineJob = viewModelScope.launch {
             runCatching { runSpeakPrompt(card) }
                 .onFailure { e ->
-                    _uiState.update { it.copy(error = e.message ?: "进入独白失败") }
+                    _uiState.update { it.copy(error = NetworkUx.userMessage(e, "进入独白失败")) }
                 }
         }
     }
@@ -404,7 +405,7 @@ class FullMockViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         asrListening = false,
-                        error = e.message ?: "ASR 启动失败（本地录音仍在继续）",
+                        error = NetworkUx.userMessage(e, "ASR 启动失败（本地录音仍在继续）"),
                     )
                 }
             }
@@ -424,7 +425,7 @@ class FullMockViewModel @Inject constructor(
                 asrEngine.start(AsrSessionConfig(languageTag = "en-GB"))
             }.onFailure { e ->
                 _uiState.update {
-                    it.copy(asrListening = false, error = e.message ?: "ASR 重启失败")
+                    it.copy(asrListening = false, error = NetworkUx.userMessage(e, "ASR 重启失败"))
                 }
             }
         }
@@ -445,7 +446,7 @@ class FullMockViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             phase = FullMockUiState.Phase.P2Speaking,
-                            error = e.message ?: "结束独白失败",
+                            error = NetworkUx.userMessage(e, "结束独白失败"),
                             statusMessage = "${it.stageLabelZh} · 结束失败，可再试「说完了」",
                         )
                     }
@@ -599,7 +600,7 @@ class FullMockViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         phase = FullMockUiState.Phase.AwaitingAnswer,
-                        error = e.message ?: "ASR 启动失败",
+                        error = NetworkUx.userMessage(e, "ASR 启动失败"),
                         statusMessage = "${it.stageLabelZh} · ASR 不可用",
                     )
                 }
@@ -704,7 +705,7 @@ class FullMockViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         phase = FullMockUiState.Phase.AwaitingAnswer,
-                        error = e.message ?: "保存失败",
+                        error = NetworkUx.userMessage(e, "保存失败"),
                         statusMessage = "${it.stageLabelZh} · 出错了，请再试",
                     )
                 }
@@ -752,7 +753,7 @@ class FullMockViewModel @Inject constructor(
                     it.copy(
                         ending = false,
                         recording = false,
-                        error = e.message ?: "评测失败",
+                        error = NetworkUx.userMessage(e, "评测失败"),
                         statusMessage = "评测失败，可稍后重试",
                     )
                 }

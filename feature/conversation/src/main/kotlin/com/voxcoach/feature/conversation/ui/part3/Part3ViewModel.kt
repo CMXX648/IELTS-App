@@ -38,6 +38,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import com.voxcoach.core.domain.ux.NetworkUx
 
 /**
  * IELTS Part 3 mock (CV-02 P3 slice): discussion questions linked to a Part 2
@@ -110,7 +111,7 @@ class Part3ViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         phase = Part3UiState.Phase.AwaitingAnswer,
-                        error = e.message ?: "Part 3 启动失败",
+                        error = NetworkUx.userMessage(e, "Part 3 启动失败"),
                         statusMessage = "启动失败，可返回重试",
                     )
                 }
@@ -281,7 +282,7 @@ class Part3ViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         phase = Part3UiState.Phase.AwaitingAnswer,
-                        error = e.message ?: "ASR 启动失败",
+                        error = NetworkUx.userMessage(e, "ASR 启动失败"),
                         statusMessage = "${it.progressLabel} · ASR 不可用",
                     )
                 }
@@ -369,7 +370,7 @@ class Part3ViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         phase = Part3UiState.Phase.AwaitingAnswer,
-                        error = e.message ?: "保存失败",
+                        error = NetworkUx.userMessage(e, "保存失败"),
                         statusMessage = "${it.progressLabel} · 出错了，请再试",
                     )
                 }
@@ -389,7 +390,7 @@ class Part3ViewModel @Inject constructor(
                             ending = false,
                             recording = false,
                             phase = Part3UiState.Phase.AwaitingAnswer,
-                            error = e.message ?: "评测失败",
+                            error = NetworkUx.userMessage(e, "评测失败"),
                             statusMessage = "评测失败，可稍后重试结束",
                         )
                     }

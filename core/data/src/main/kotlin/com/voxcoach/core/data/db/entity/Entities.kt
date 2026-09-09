@@ -93,6 +93,7 @@ data class MistakeEntity(
     val dimension: String,
     val quote: String,
     val correction: String,
+    val why: String = "",
     val grammarPointId: String?,
     val status: String,
     val retriedCount: Int,

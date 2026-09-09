@@ -104,6 +104,7 @@ data class Mistake(
     val dimension: String,
     val quote: String,
     val correction: String,
+    val why: String = "",
     val grammarPointId: String? = null,
     val status: MistakeStatus = MistakeStatus.OPEN,
     val retriedCount: Int = 0,

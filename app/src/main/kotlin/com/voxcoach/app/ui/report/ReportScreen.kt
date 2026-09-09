@@ -180,6 +180,7 @@ class ReportViewModel @Inject constructor(
                     dimension = item.dimension,
                     quote = item.quote,
                     correction = item.correction,
+                    why = item.why,
                     status = MistakeStatus.OPEN,
                     createdAt = now,
                 ),

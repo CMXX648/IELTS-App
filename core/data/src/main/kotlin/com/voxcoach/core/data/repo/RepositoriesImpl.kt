@@ -128,9 +128,11 @@ class MistakeRepositoryImpl @Inject constructor(
     private val mistakeDao: MistakeDao,
 ) : MistakeRepository {
     override suspend fun insert(mistake: Mistake) = mistakeDao.insert(mistake.toEntity())
+    override suspend fun get(id: String): Mistake? = mistakeDao.get(id)?.toDomain()
     override suspend fun listOpen(): List<Mistake> = mistakeDao.listOpen().map { it.toDomain() }
     override fun observeOpen(): Flow<List<Mistake>> =
         mistakeDao.observeOpen().map { list -> list.map { it.toDomain() } }
+    override suspend fun markMastered(id: String) = mistakeDao.markMastered(id)
 }
 
 @Singleton

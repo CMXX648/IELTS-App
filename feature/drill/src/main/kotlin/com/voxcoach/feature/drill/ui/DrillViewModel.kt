@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import com.voxcoach.core.domain.ux.NetworkUx
 
 @HiltViewModel
 class DrillViewModel @Inject constructor(
@@ -94,7 +95,7 @@ class DrillViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         phase = DrillUiState.Phase.Idle,
-                        error = e.message ?: "ASR 启动失败",
+                        error = NetworkUx.userMessage(e, "ASR 启动失败"),
                         statusMessage = "ASR 不可用",
                     )
                 }
@@ -186,7 +187,7 @@ class DrillViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         phase = DrillUiState.Phase.Idle,
-                        error = e.message ?: "判定失败",
+                        error = NetworkUx.userMessage(e, "判定失败"),
                         statusMessage = "判定失败，可跳过再试",
                     )
                 }
@@ -208,6 +209,7 @@ class DrillViewModel @Inject constructor(
                     dimension = "gra",
                     quote = state.finalTranscript,
                     correction = judge.correction.ifBlank { judge.model },
+                    why = judge.why,
                     grammarPointId = point.id,
                     status = MistakeStatus.OPEN,
                     createdAt = System.currentTimeMillis(),
