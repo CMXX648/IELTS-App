@@ -58,6 +58,8 @@ fun HomeScreen(
     onStartConversation: (topicId: String) -> Unit,
     onStartPart1: () -> Unit = {},
     onStartPart2: () -> Unit = {},
+    onStartPart3: () -> Unit = {},
+    onStartFullMock: () -> Unit = {},
     onOpenGrammar: () -> Unit = {},
     onOpenDebug: () -> Unit,
     onOpenSettings: () -> Unit = {},
@@ -68,6 +70,8 @@ fun HomeScreen(
     var pendingTopicId by remember { mutableStateOf<String?>(null) }
     var pendingPart1 by remember { mutableStateOf(false) }
     var pendingPart2 by remember { mutableStateOf(false) }
+    var pendingPart3 by remember { mutableStateOf(false) }
+    var pendingFullMock by remember { mutableStateOf(false) }
     var showRationale by remember { mutableStateOf(false) }
 
     fun hasMic(): Boolean =
@@ -91,12 +95,18 @@ fun HomeScreen(
         val topic = pendingTopicId
         val wantPart1 = pendingPart1
         val wantPart2 = pendingPart2
+        val wantPart3 = pendingPart3
+        val wantFullMock = pendingFullMock
         pendingTopicId = null
         pendingPart1 = false
         pendingPart2 = false
+        pendingPart3 = false
+        pendingFullMock = false
         when {
             granted && wantPart1 -> onStartPart1()
             granted && wantPart2 -> onStartPart2()
+            granted && wantPart3 -> onStartPart3()
+            granted && wantFullMock -> onStartFullMock()
             granted && topic != null -> onStartConversation(topic)
             !granted -> showRationale = true
         }
@@ -109,6 +119,8 @@ fun HomeScreen(
             pendingTopicId = topicId
             pendingPart1 = false
             pendingPart2 = false
+            pendingPart3 = false
+            pendingFullMock = false
             showRationale = true
         }
     }
@@ -119,6 +131,8 @@ fun HomeScreen(
         } else {
             pendingPart1 = true
             pendingPart2 = false
+            pendingPart3 = false
+            pendingFullMock = false
             pendingTopicId = null
             showRationale = true
         }
@@ -130,6 +144,34 @@ fun HomeScreen(
         } else {
             pendingPart2 = true
             pendingPart1 = false
+            pendingPart3 = false
+            pendingFullMock = false
+            pendingTopicId = null
+            showRationale = true
+        }
+    }
+
+    fun tryStartPart3() {
+        if (hasMic()) {
+            onStartPart3()
+        } else {
+            pendingPart3 = true
+            pendingPart1 = false
+            pendingPart2 = false
+            pendingFullMock = false
+            pendingTopicId = null
+            showRationale = true
+        }
+    }
+
+    fun tryStartFullMock() {
+        if (hasMic()) {
+            onStartFullMock()
+        } else {
+            pendingFullMock = true
+            pendingPart1 = false
+            pendingPart2 = false
+            pendingPart3 = false
             pendingTopicId = null
             showRationale = true
         }
@@ -142,6 +184,8 @@ fun HomeScreen(
                 pendingTopicId = null
                 pendingPart1 = false
                 pendingPart2 = false
+                pendingPart3 = false
+                pendingFullMock = false
             },
             title = { Text("需要麦克风权限") },
             text = {
@@ -162,6 +206,8 @@ fun HomeScreen(
                         val topic = pendingTopicId
                         val wantPart1 = pendingPart1
                         val wantPart2 = pendingPart2
+                        val wantPart3 = pendingPart3
+                        val wantFullMock = pendingFullMock
                         val perms = notificationPerms()
                         if (perms.isEmpty()) {
                             when {
@@ -172,6 +218,14 @@ fun HomeScreen(
                                 wantPart2 -> {
                                     pendingPart2 = false
                                     onStartPart2()
+                                }
+                                wantPart3 -> {
+                                    pendingPart3 = false
+                                    onStartPart3()
+                                }
+                                wantFullMock -> {
+                                    pendingFullMock = false
+                                    onStartFullMock()
                                 }
                                 topic != null -> {
                                     pendingTopicId = null
@@ -191,6 +245,8 @@ fun HomeScreen(
                         pendingTopicId = null
                         pendingPart1 = false
                         pendingPart2 = false
+                        pendingPart3 = false
+                        pendingFullMock = false
                     },
                 ) { Text("取消") }
             },
@@ -252,6 +308,36 @@ fun HomeScreen(
                     Spacer(Modifier.height(8.dp))
                     Button(onClick = { tryStartPart2() }, modifier = Modifier.fillMaxWidth()) {
                         Text("开始 Part 2 模拟")
+                    }
+                }
+            }
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp)) {
+                    Text("模拟口试 · Part 3", style = MaterialTheme.typography.titleLarge)
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "承接 Part 2 主题的深度讨论 5 题，进度「第 x/5 题」，答完自动 EV（CV-02 P3）",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Button(onClick = { tryStartPart3() }, modifier = Modifier.fillMaxWidth()) {
+                        Text("开始 Part 3 模拟")
+                    }
+                }
+            }
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp)) {
+                    Text("完整模考", style = MaterialTheme.typography.titleLarge)
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "Part 1（5 题）→ Part 2（准备+独白）→ Part 3（5 题）不离场，结束后一次统一 EV（MOCK）",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Button(onClick = { tryStartFullMock() }, modifier = Modifier.fillMaxWidth()) {
+                        Text("开始完整模考")
                     }
                 }
             }
