@@ -1,0 +1,40 @@
+{
+  "id": "cal-03",
+  "title": "Friends — mid band (~6.0)",
+  "topicTitle": "Friends",
+  "notes": "Willing speaker with emerging complex sentences; some inaccuracy.",
+  "labels": { "fc": 6.0, "lr": 6.0, "gra": 6.0, "p": 6.0 },
+  "turns": [
+    { "role": "Examiner", "text": "How often do you meet your friends?" },
+    { "role": "Candidate", "text": "I try to see my close friends at least twice a month. We usually grab coffee or walk in the park if the weather is nice." },
+    { "role": "Examiner", "text": "What do you value most in a friendship?" },
+    { "role": "Candidate", "text": "Honesty and support. If I have a problem, I want someone who listens carefully instead of just giving quick advice." },
+    { "role": "Examiner", "text": "Have friendships changed since you were a teenager?" },
+    { "role": "Candidate", "text": "Yes. When I was younger I had many classmates as friends, but now I focus on a smaller circle because work takes more time." }
+  ],
+  "llmResponse": {
+    "schemaVer": "ev.v1",
+    "engine": { "model": "fixture", "promptVer": "rubric-2026.09" },
+    "overallBand": 6.0,
+    "dims": {
+      "fc":  { "score": 6.0, "comment": "Coherent expansion with clear topic development.", "evidence": ["We usually grab coffee or walk in the park"] },
+      "lr":  { "score": 6.0, "comment": "Sufficient range; some natural collocations.", "evidence": ["grab coffee", "smaller circle"] },
+      "gra": { "score": 6.0, "comment": "Mix of simple and complex clauses with good control.", "evidence": ["instead of just giving quick advice"] },
+      "p":   { "score": 6.0, "comment": "Text-only; assumed clear enough.", "evidence": [] }
+    },
+    "items": [
+      {
+        "id": "i_01",
+        "dim": "lr",
+        "category": "lexical_upgrade",
+        "quote": "I want someone who listens carefully",
+        "correction": "I want someone who listens carefully and shows empathy.",
+        "why": "Could push lexical precision with a topic-specific noun.",
+        "model": ["I value friends who listen carefully and show real empathy."]
+      }
+    ],
+    "highlights": [
+      { "dim": "fc", "quote": "now I focus on a smaller circle because work takes more time", "note": "Clear cause–effect development." }
+    ]
+  }
+}

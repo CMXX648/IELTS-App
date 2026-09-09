@@ -1,0 +1,40 @@
+{
+  "id": "cal-06",
+  "title": "Environment — high mid (~7.5)",
+  "topicTitle": "Environment",
+  "notes": "Resourceful speaker; flexible grammar; labels around 7.5.",
+  "labels": { "fc": 7.5, "lr": 7.5, "gra": 7.0, "p": 7.5 },
+  "turns": [
+    { "role": "Examiner", "text": "What environmental issues concern people in your area?" },
+    { "role": "Candidate", "text": "Air quality is the main concern. During winter, haze from heating and traffic makes outdoor exercise less appealing, so local groups push for cleaner public transport." },
+    { "role": "Examiner", "text": "Do individuals or governments have more responsibility?" },
+    { "role": "Candidate", "text": "Both matter, but governments set the incentives. If recycling is inconvenient, even motivated citizens give up; subsidies for electric buses change behaviour faster than posters alone." },
+    { "role": "Examiner", "text": "Has your own lifestyle changed?" },
+    { "role": "Candidate", "text": "Somewhat. I carry a reusable bottle and I avoid food delivery when I can cook. These are small steps, yet they keep the issue visible in daily life rather than abstract news." }
+  ],
+  "llmResponse": {
+    "schemaVer": "ev.v1",
+    "engine": { "model": "fixture", "promptVer": "rubric-2026.09" },
+    "overallBand": 7.5,
+    "dims": {
+      "fc":  { "score": 7.5, "comment": "Smooth topic shifts with well-signalled arguments.", "evidence": ["Both matter, but governments set the incentives"] },
+      "lr":  { "score": 7.5, "comment": "Topic-precise lexis with natural hedging.", "evidence": ["subsidies for electric buses", "rather than abstract news"] },
+      "gra": { "score": 7.0, "comment": "Flexible complex sentences; minor room to tighten.", "evidence": ["If recycling is inconvenient, even motivated citizens give up"] },
+      "p":   { "score": 7.5, "comment": "Text-only; assumed clear with natural stress patterns.", "evidence": [] }
+    },
+    "items": [
+      {
+        "id": "i_01",
+        "dim": "gra",
+        "category": "style",
+        "quote": "These are small steps, yet they keep the issue visible",
+        "correction": "These may be small steps, yet they keep the issue visible",
+        "why": "A modal softens the claim and sounds more band-7+ discursive.",
+        "model": ["These may be small steps, yet they keep the issue visible in daily life."]
+      }
+    ],
+    "highlights": [
+      { "dim": "lr", "quote": "subsidies for electric buses change behaviour faster than posters alone", "note": "Precise policy contrast." }
+    ]
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "id": "cal-07",
+  "title": "Travel — mixed dims (strong LR, weaker GRA)",
+  "topicTitle": "Travel",
+  "notes": "Directionally uneven profile: LR/FC ahead of GRA; tests per-dimension Δ.",
+  "labels": { "fc": 6.5, "lr": 7.0, "gra": 5.5, "p": 6.5 },
+  "turns": [
+    { "role": "Examiner", "text": "Do you prefer travelling alone or with others?" },
+    { "role": "Candidate", "text": "I prefer travelling alone when I want flexibility. I can linger in a museum or change plans without negotiating every stop." },
+    { "role": "Examiner", "text": "What was a memorable trip?" },
+    { "role": "Candidate", "text": "Last year I go to a mountain town. The sunrise above the clouds was breathtaking, and the local tea houses felt welcoming." },
+    { "role": "Examiner", "text": "Is tourism always positive for local communities?" },
+    { "role": "Candidate", "text": "Not always. It brings income, but overcrowding can erode daily life. Cities need visitor caps or timed tickets so residents are not pushed aside." }
+  ],
+  "llmResponse": {
+    "schemaVer": "ev.v1",
+    "engine": { "model": "fixture", "promptVer": "rubric-2026.09" },
+    "overallBand": 6.5,
+    "dims": {
+      "fc":  { "score": 6.5, "comment": "Ideas develop clearly despite occasional form slips.", "evidence": ["I can linger in a museum or change plans"] },
+      "lr":  { "score": 7.0, "comment": "Strong topic lexis and imagery.", "evidence": ["linger", "breathtaking", "erode daily life"] },
+      "gra": { "score": 5.5, "comment": "Noticeable tense error amid otherwise ambitious structures.", "evidence": ["Last year I go to a mountain town"] },
+      "p":   { "score": 6.5, "comment": "Text-only; assumed clear.", "evidence": [] }
+    },
+    "items": [
+      {
+        "id": "i_01",
+        "dim": "gra",
+        "category": "grammar_tense",
+        "quote": "Last year I go to a mountain town.",
+        "correction": "Last year I went to a mountain town.",
+        "why": "Past-time adverbial requires past simple.",
+        "model": ["Last year I went to a mountain town for three days."]
+      }
+    ],
+    "highlights": [
+      { "dim": "lr", "quote": "overcrowding can erode daily life", "note": "Precise verb choice for social impact." }
+    ]
+  }
+}

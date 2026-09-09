@@ -1,0 +1,40 @@
+{
+  "id": "cal-01",
+  "title": "Hometown — low band (~5.0)",
+  "topicTitle": "Hometown",
+  "notes": "Short answers, frequent grammar slips, limited range. Human labels ~5.0.",
+  "labels": { "fc": 5.0, "lr": 5.0, "gra": 4.5, "p": 5.0 },
+  "turns": [
+    { "role": "Examiner", "text": "Where is your hometown?" },
+    { "role": "Candidate", "text": "My hometown is small city. I live there many year." },
+    { "role": "Examiner", "text": "What do you like about it?" },
+    { "role": "Candidate", "text": "I like park. And food is good. People nice." },
+    { "role": "Examiner", "text": "Has it changed recently?" },
+    { "role": "Candidate", "text": "Yes, more building. Before is quiet, now is noisy. I not like too much car." }
+  ],
+  "llmResponse": {
+    "schemaVer": "ev.v1",
+    "engine": { "model": "fixture", "promptVer": "rubric-2026.09" },
+    "overallBand": 5.0,
+    "dims": {
+      "fc":  { "score": 5.0, "comment": "Can keep going but answers are short and loosely linked.", "evidence": ["I like park. And food is good."] },
+      "lr":  { "score": 5.0, "comment": "Basic vocabulary; repetition of simple adjectives.", "evidence": ["People nice"] },
+      "gra": { "score": 4.5, "comment": "Frequent article/tense errors; mostly simple clauses.", "evidence": ["I live there many year", "Before is quiet"] },
+      "p":   { "score": 5.0, "comment": "Text-only fixture; pronunciation inferred as intelligible with L1 influence.", "evidence": [] }
+    },
+    "items": [
+      {
+        "id": "i_01",
+        "dim": "gra",
+        "category": "grammar_article",
+        "quote": "My hometown is small city.",
+        "correction": "My hometown is a small city.",
+        "why": "Singular countable nouns need an article.",
+        "model": ["My hometown is a small city near the coast."]
+      }
+    ],
+    "highlights": [
+      { "dim": "fc", "quote": "Before is quiet, now is noisy.", "note": "Attempts a simple contrast despite form errors." }
+    ]
+  }
+}

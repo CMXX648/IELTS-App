@@ -1,0 +1,40 @@
+{
+  "id": "cal-04",
+  "title": "Hometown — mid (~6.5)",
+  "topicTitle": "Hometown",
+  "notes": "Classic mid-band hometown sample; labels ~6.5 with GRA slightly lower.",
+  "labels": { "fc": 6.5, "lr": 6.5, "gra": 6.0, "p": 7.0 },
+  "turns": [
+    { "role": "Examiner", "text": "Let's talk about your hometown. Where do you live, and how long have you lived there?" },
+    { "role": "Candidate", "text": "I come from a small coastal town. I have lived there for most of my life, although I moved to the city for university three years ago." },
+    { "role": "Examiner", "text": "What is your hometown famous for?" },
+    { "role": "Candidate", "text": "It is famous for its seafood and friendly people. In summer, many visitors come for the beach festivals." },
+    { "role": "Examiner", "text": "Would you recommend it to a visitor?" },
+    { "role": "Candidate", "text": "Yes, especially if they enjoy walking by the sea. I enjoy practising English with travellers when I go back, which helps me stay motivated." }
+  ],
+  "llmResponse": {
+    "schemaVer": "ev.v1",
+    "engine": { "model": "fixture", "promptVer": "rubric-2026.09" },
+    "overallBand": 6.5,
+    "dims": {
+      "fc":  { "score": 6.5, "comment": "Generally coherent with natural expansion.", "evidence": ["I have lived there for most of my life"] },
+      "lr":  { "score": 6.5, "comment": "Adequate range for familiar topics.", "evidence": ["famous for its seafood and friendly people"] },
+      "gra": { "score": 6.0, "comment": "Mostly controlled; occasional wording that could be tighter.", "evidence": ["I enjoy practising English every day"] },
+      "p":   { "score": 7.0, "comment": "Text-only; assumed clear with good chunking.", "evidence": [] }
+    },
+    "items": [
+      {
+        "id": "i_01",
+        "dim": "gra",
+        "category": "grammar_word_choice",
+        "quote": "I enjoy practising English with travellers when I go back",
+        "correction": "I practise English with travellers when I go back",
+        "why": "Under time pressure a direct habit verb is clearer; 'enjoy practising' is acceptable but slightly padded.",
+        "model": ["I practise speaking English with travellers when I go back."]
+      }
+    ],
+    "highlights": [
+      { "dim": "lr", "quote": "famous for its seafood and friendly people", "note": "Natural collocation." }
+    ]
+  }
+}

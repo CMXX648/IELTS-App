@@ -29,6 +29,19 @@ M1 验收用固定 3 句英文走 MockAsr → MockLlm → MockTts，统计 ASR�
 1. **单元测试**：`./gradlew :core:domain:test`（含 `LatencySmokeTest` / `EvJsonParserTest`）
 2. **应用内**：长按首页标题「VoxCoach 首页」进入调试页，点「运行 LatencySmoke」；报告写入 `files/smoke/latency-smoke-*.md`，并打 logcat tag `LatencySmoke`
 
+### EV 标定回归（M2）
+
+内置 8 条合成口语对话 + 人工半档标签（`core/domain` 资源 `ev_calibration/`，见 docs/04 §8、docs/06 M2）。离线路径：`FixtureBackedLlmClient` 注入固定 EV JSON → `EvJsonParser` → 逐维 `|Δ| ≤ 0.5`。
+
+```bash
+source /home/box/android-env.sh   # 或自备 SDK
+./gradlew :core:domain:test --tests 'com.voxcoach.core.domain.ev.EvCalibrationTest'
+# 或跑整个 domain 单测：
+./gradlew :core:domain:test
+```
+
+可选 live 调试：构造 `EvCalibrationRunner(realLlm, config = Config(live = true))`（默认 `live=false`，单测勿开）。
+
 ---
 
 ## 二、文档地图
