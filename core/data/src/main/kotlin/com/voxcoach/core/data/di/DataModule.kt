@@ -19,8 +19,10 @@ import com.voxcoach.core.data.repo.ProfileRepositoryImpl
 import com.voxcoach.core.data.repo.SessionRepositoryImpl
 import com.voxcoach.core.data.repo.TopicRepositoryImpl
 import com.voxcoach.core.data.repo.TurnRepositoryImpl
+import com.voxcoach.core.data.security.AndroidKeystoreSecureStringStore
 import com.voxcoach.core.data.settings.DataStoreLlmSettingsRepository
 import com.voxcoach.core.data.settings.DataStoreOnboardingRepository
+import com.voxcoach.core.domain.security.SecureStringStore
 import com.voxcoach.core.domain.repository.DrillAttemptRepository
 import com.voxcoach.core.domain.repository.EvRepository
 import com.voxcoach.core.domain.repository.GrammarPointRepository
@@ -48,6 +50,9 @@ import kotlinx.coroutines.launch
 abstract class DataBindModule {
     @Binds @Singleton
     abstract fun bindSettings(impl: DataStoreLlmSettingsRepository): LlmSettingsRepository
+
+    @Binds @Singleton
+    abstract fun bindSecureStringStore(impl: AndroidKeystoreSecureStringStore): SecureStringStore
 
     @Binds @Singleton
     abstract fun bindOnboarding(impl: DataStoreOnboardingRepository): OnboardingRepository
