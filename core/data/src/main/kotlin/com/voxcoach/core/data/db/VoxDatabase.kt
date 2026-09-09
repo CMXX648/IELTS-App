@@ -80,8 +80,22 @@ object TopicSeeds {
         titleZh = "家乡",
         groupName = "part1",
     )
+    val dailyRoutine = TopicEntity(
+        id = "T-daily_routine",
+        code = "daily_routine",
+        title = "Daily routine",
+        titleZh = "日常生活",
+        groupName = "part1",
+    )
+    val friends = TopicEntity(
+        id = "T-friends",
+        code = "friends",
+        title = "Friends",
+        titleZh = "朋友",
+        groupName = "part1",
+    )
 
-    fun all(): List<TopicEntity> = listOf(hometown)
+    fun all(): List<TopicEntity> = listOf(hometown, dailyRoutine, friends)
 }
 
 class SeedRunner(
@@ -90,9 +104,8 @@ class SeedRunner(
     private val grammarPointDao: GrammarPointDao,
 ) {
     suspend fun ensureSeeded() {
-        if (topicDao.count() == 0) {
-            topicDao.insertAll(TopicSeeds.all())
-        }
+        // IGNORE conflict: backfill new Part1 themes on existing installs
+        topicDao.insertAll(TopicSeeds.all())
         if (grammarPointDao.count() == 0) {
             grammarPointDao.insertAll(GrammarSeeds.all())
         }
