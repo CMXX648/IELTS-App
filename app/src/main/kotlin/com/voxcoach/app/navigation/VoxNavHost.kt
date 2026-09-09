@@ -35,6 +35,8 @@ import com.voxcoach.core.domain.settings.OnboardingRepository
 import com.voxcoach.feature.conversation.ui.ConversationRoute
 import com.voxcoach.feature.conversation.ui.part1.Part1Route
 import com.voxcoach.feature.conversation.ui.part2.Part2Route
+import com.voxcoach.feature.conversation.ui.part3.Part3Route
+import com.voxcoach.feature.conversation.ui.fullmock.FullMockRoute
 import com.voxcoach.feature.drill.ui.DrillListRoute
 import com.voxcoach.feature.drill.ui.DrillRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -49,6 +51,8 @@ object Routes {
     const val Conversation = "conversation/{topicId}"
     const val Part1Mock = "mock/part1"
     const val Part2Mock = "mock/part2"
+    const val Part3Mock = "mock/part3"
+    const val FullMock = "mock/full"
     const val Report = "report/{sessionId}"
     const val Profile = "profile"
     const val Settings = "settings"
@@ -140,6 +144,8 @@ fun VoxNavHost(
                     },
                     onStartPart1 = { navController.navigate(Routes.Part1Mock) },
                     onStartPart2 = { navController.navigate(Routes.Part2Mock) },
+                    onStartPart3 = { navController.navigate(Routes.Part3Mock) },
+                    onStartFullMock = { navController.navigate(Routes.FullMock) },
                     onOpenGrammar = { navController.navigate(Routes.DrillList) },
                     onOpenDebug = { navController.navigate(Routes.DebugSmoke) },
                     onOpenSettings = { navController.navigate(Routes.Settings) },
@@ -157,6 +163,26 @@ fun VoxNavHost(
             }
             composable(Routes.Part2Mock) {
                 Part2Route(
+                    onBack = { navController.popBackStack() },
+                    onOpenReport = { sessionId ->
+                        navController.navigate(Routes.report(sessionId)) {
+                            popUpTo(Routes.Home)
+                        }
+                    },
+                )
+            }
+            composable(Routes.Part3Mock) {
+                Part3Route(
+                    onBack = { navController.popBackStack() },
+                    onOpenReport = { sessionId ->
+                        navController.navigate(Routes.report(sessionId)) {
+                            popUpTo(Routes.Home)
+                        }
+                    },
+                )
+            }
+            composable(Routes.FullMock) {
+                FullMockRoute(
                     onBack = { navController.popBackStack() },
                     onOpenReport = { sessionId ->
                         navController.navigate(Routes.report(sessionId)) {
