@@ -1,6 +1,7 @@
 package com.voxcoach.core.domain.repository
 
 import com.voxcoach.core.domain.model.EvResult
+import com.voxcoach.core.domain.pf.EvScoreSnapshot
 import com.voxcoach.core.domain.model.DrillAttempt
 import com.voxcoach.core.domain.model.FeedbackItem
 import com.voxcoach.core.domain.model.GrammarPoint
@@ -36,6 +37,8 @@ interface EvRepository {
     suspend fun save(result: EvResult)
     suspend fun getBySession(sessionId: String): EvResult?
     suspend fun get(evId: String): EvResult?
+    /** Newest-first score snapshots for PF-02 (no feedback items). */
+    suspend fun listRecentScores(limit: Int): List<EvScoreSnapshot>
     suspend fun listFeedback(evId: String): List<FeedbackItem>
     suspend fun markCollected(itemId: String, at: Long)
 }
@@ -50,6 +53,8 @@ interface ProfileRepository {
     fun observe(): Flow<UserProfile>
     suspend fun get(): UserProfile
     suspend fun addPractice(durationMs: Long, turnCount: Int)
+    /** Persist PF-02 dimTrendCache JSON for fast profile open. */
+    suspend fun updateDimTrendCache(cacheJson: String)
 }
 
 interface GrammarPointRepository {
