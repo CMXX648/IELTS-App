@@ -14,6 +14,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -24,11 +28,19 @@ import androidx.navigation.navArgument
 import com.voxcoach.app.ui.SettingsScreen
 import com.voxcoach.app.ui.debug.LatencySmokeScreen
 import com.voxcoach.app.ui.home.HomeScreen
+import com.voxcoach.app.ui.onboarding.OnboardingScreen
 import com.voxcoach.app.ui.profile.ProfileScreen
 import com.voxcoach.app.ui.report.ReportScreen
+import com.voxcoach.core.domain.settings.OnboardingRepository
 import com.voxcoach.feature.conversation.ui.ConversationRoute
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
 
 object Routes {
+    const val Onboarding = "onboarding"
     const val Home = "home"
     const val Conversation = "conversation/{topicId}"
     const val Report = "report/{sessionId}"
@@ -42,9 +54,26 @@ object Routes {
 
 private data class Tab(val route: String, val label: String, val icon: ImageVector)
 
+@HiltViewModel
+class RootNavViewModel @Inject constructor(
+    onboardingRepository: OnboardingRepository,
+) : ViewModel() {
+    val onboardingDone: StateFlow<Boolean?> = onboardingRepository.onboardingDone
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+}
+
 @Composable
-fun VoxNavHost() {
+fun VoxNavHost(
+    rootViewModel: RootNavViewModel = hiltViewModel(),
+) {
+    val onboardingDone by rootViewModel.onboardingDone.collectAsStateWithLifecycle()
+    if (onboardingDone == null) {
+        Text("加载中…")
+        return
+    }
+
     val navController = rememberNavController()
+    val start = if (onboardingDone == true) Routes.Home else Routes.Onboarding
     val tabs = listOf(
         Tab(Routes.Home, "首页", Icons.Default.Home),
         Tab(Routes.Profile, "档案", Icons.Default.Person),
@@ -80,15 +109,28 @@ fun VoxNavHost() {
     ) { padding ->
         NavHost(
             navController = navController,
-            startDestination = Routes.Home,
+            startDestination = start,
             modifier = Modifier.padding(padding),
         ) {
+            composable(Routes.Onboarding) {
+                OnboardingScreen(
+                    onOpenSettings = {
+                        navController.navigate(Routes.Settings)
+                    },
+                    onFinished = {
+                        navController.navigate(Routes.Home) {
+                            popUpTo(Routes.Onboarding) { inclusive = true }
+                        }
+                    },
+                )
+            }
             composable(Routes.Home) {
                 HomeScreen(
                     onStartConversation = { topicId ->
                         navController.navigate(Routes.conversation(topicId))
                     },
                     onOpenDebug = { navController.navigate(Routes.DebugSmoke) },
+                    onOpenSettings = { navController.navigate(Routes.Settings) },
                 )
             }
             composable(
@@ -114,7 +156,13 @@ fun VoxNavHost() {
                 ProfileScreen()
             }
             composable(Routes.Settings) {
-                SettingsScreen(onBack = { navController.navigate(Routes.Home) })
+                SettingsScreen(
+                    onBack = {
+                        if (!navController.popBackStack()) {
+                            navController.navigate(Routes.Home)
+                        }
+                    },
+                )
             }
             composable(Routes.DebugSmoke) {
                 LatencySmokeScreen(onBack = { navController.popBackStack() })

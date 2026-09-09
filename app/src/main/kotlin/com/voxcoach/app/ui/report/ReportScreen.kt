@@ -1,5 +1,6 @@
 package com.voxcoach.app.ui.report
 
+import android.media.MediaPlayer
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,16 +13,20 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -34,9 +39,14 @@ import com.voxcoach.core.domain.model.EvResult
 import com.voxcoach.core.domain.model.FeedbackItem
 import com.voxcoach.core.domain.model.Mistake
 import com.voxcoach.core.domain.model.MistakeStatus
+import com.voxcoach.core.domain.model.Turn
+import com.voxcoach.core.domain.model.TurnRole
 import com.voxcoach.core.domain.repository.EvRepository
 import com.voxcoach.core.domain.repository.MistakeRepository
+import com.voxcoach.core.domain.repository.SessionRepository
+import com.voxcoach.core.domain.repository.TurnRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.io.File
 import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -50,12 +60,18 @@ data class ReportUiState(
     val ev: EvResult? = null,
     val message: String? = null,
     val collectedIds: Set<String> = emptySet(),
+    val audioPath: String? = null,
+    val turns: List<Turn> = emptyList(),
+    val playing: Boolean = false,
+    val playbackError: String? = null,
 )
 
 @HiltViewModel
 class ReportViewModel @Inject constructor(
     private val evRepository: EvRepository,
     private val mistakeRepository: MistakeRepository,
+    private val sessionRepository: SessionRepository,
+    private val turnRepository: TurnRepository,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
     private val sessionId: String = checkNotNull(savedStateHandle["sessionId"])
@@ -63,20 +79,94 @@ class ReportViewModel @Inject constructor(
     private val _state = MutableStateFlow(ReportUiState())
     val state: StateFlow<ReportUiState> = _state.asStateFlow()
 
+    private var player: MediaPlayer? = null
+
     init {
         viewModelScope.launch {
             val ev = evRepository.getBySession(sessionId)
+            val session = sessionRepository.get(sessionId)
+            val turns = turnRepository.listForSession(sessionId)
             _state.update {
                 it.copy(
                     loading = false,
                     ev = ev,
-                    message = if (ev == null) "暂无评测结果" else null,
+                    audioPath = session?.audioPath,
+                    turns = turns,
+                    message = when {
+                        ev == null -> "暂无评测结果"
+                        else -> null
+                    },
                     collectedIds = ev?.items?.mapNotNull { item ->
                         item.id.takeIf { id -> item.collectedToMistakeAt != null }
                     }?.toSet().orEmpty(),
                 )
             }
         }
+    }
+
+    fun playFull() {
+        val path = _state.value.audioPath ?: run {
+            _state.update { it.copy(playbackError = "本会话无本地录音") }
+            return
+        }
+        if (!File(path).exists()) {
+            _state.update { it.copy(playbackError = "录音文件不存在：$path") }
+            return
+        }
+        runCatching {
+            releasePlayer()
+            player = MediaPlayer().apply {
+                setDataSource(path)
+                setOnCompletionListener {
+                    _state.update { s -> s.copy(playing = false) }
+                }
+                prepare()
+                start()
+            }
+            _state.update { it.copy(playing = true, playbackError = null, message = "正在播放整段录音") }
+        }.onFailure { e ->
+            _state.update { it.copy(playing = false, playbackError = e.message ?: "播放失败") }
+        }
+    }
+
+    fun seekToTurn(turn: Turn) {
+        val path = _state.value.audioPath ?: run {
+            _state.update { it.copy(playbackError = "本会话无本地录音") }
+            return
+        }
+        val startMs = turn.startMs ?: 0L
+        runCatching {
+            val p = player
+            if (p == null || !_state.value.playing) {
+                releasePlayer()
+                player = MediaPlayer().apply {
+                    setDataSource(path)
+                    setOnCompletionListener {
+                        _state.update { s -> s.copy(playing = false) }
+                    }
+                    prepare()
+                    seekTo(startMs.toInt().coerceAtLeast(0))
+                    start()
+                }
+            } else {
+                p.seekTo(startMs.toInt().coerceAtLeast(0))
+                if (!p.isPlaying) p.start()
+            }
+            _state.update {
+                it.copy(
+                    playing = true,
+                    playbackError = null,
+                    message = "跳转到第 ${turn.seq} 句（${startMs}ms）",
+                )
+            }
+        }.onFailure { e ->
+            _state.update { it.copy(playbackError = e.message ?: "跳转失败") }
+        }
+    }
+
+    fun pausePlayback() {
+        runCatching { player?.pause() }
+        _state.update { it.copy(playing = false) }
     }
 
     fun collectToMistakes(item: FeedbackItem) {
@@ -103,6 +193,21 @@ class ReportViewModel @Inject constructor(
             }
         }
     }
+
+    private fun releasePlayer() {
+        runCatching {
+            player?.run {
+                stop()
+                release()
+            }
+        }
+        player = null
+    }
+
+    override fun onCleared() {
+        releasePlayer()
+        super.onCleared()
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -112,6 +217,9 @@ fun ReportScreen(
     viewModel: ReportViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    DisposableEffect(Unit) {
+        onDispose { /* ViewModel.onCleared releases player */ }
+    }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -136,9 +244,60 @@ fun ReportScreen(
                 Text("加载中…")
                 return@Column
             }
+
+            Text("录音回放（RP-01）", style = MaterialTheme.typography.titleMedium)
+            if (state.audioPath.isNullOrBlank()) {
+                Text(
+                    "本会话无本地录音文件",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                Text(
+                    "文件：${state.audioPath}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Button(
+                        onClick = {
+                            if (state.playing) viewModel.pausePlayback() else viewModel.playFull()
+                        },
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Icon(
+                            if (state.playing) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            contentDescription = null,
+                        )
+                        Spacer(Modifier.padding(4.dp))
+                        Text(if (state.playing) "暂停" else "播放整段")
+                    }
+                }
+                val userTurns = state.turns.filter { it.role == TurnRole.USER && it.startMs != null }
+                if (userTurns.isNotEmpty()) {
+                    Text("跳转到用户轮次", style = MaterialTheme.typography.labelLarge)
+                    userTurns.forEach { turn ->
+                        OutlinedButton(
+                            onClick = { viewModel.seekToTurn(turn) },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(
+                                "第 ${turn.seq} 句 · ${turn.startMs}–${turn.endMs ?: "?"}ms · " +
+                                    turn.text.take(28),
+                            )
+                        }
+                    }
+                }
+            }
+            state.playbackError?.let {
+                Text(it, color = MaterialTheme.colorScheme.error)
+            }
+
             val ev = state.ev
             if (ev == null) {
-                Text(state.message ?: "无数据")
+                Text(state.message ?: "无评测数据")
                 return@Column
             }
             Text("总分 Band ${ev.overallBand}", style = MaterialTheme.typography.headlineSmall)

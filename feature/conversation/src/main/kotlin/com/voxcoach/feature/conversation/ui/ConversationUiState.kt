@@ -17,6 +17,8 @@ data class ConversationUiState(
     val ending: Boolean = false,
     val endedEvId: String? = null,
     val navigateToReportSessionId: String? = null,
+    val recording: Boolean = false,
+    val audioPath: String? = null,
 ) {
     enum class Phase {
         Idle,
