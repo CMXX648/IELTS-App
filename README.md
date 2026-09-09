@@ -14,11 +14,19 @@
 
 ## 一、项目现状（重要）
 
-- **当前阶段：M1 工程骨架 + 链路验证（编码已开始）**。
-- 设计文档（`docs/01`–`06`）已冻结；Android 多模块工程自 M1 起落地（见 `docs/06-roadmap-acceptance.md` §2 M1）。
+- **当前阶段：M2 垂直切片已启动（M1 closeout + Session/EV/Room 主路径）**。
+- 设计文档（`docs/01`–`06`）已冻结；Android 多模块工程自 M1 起落地（见 `docs/06-roadmap-acceptance.md` §2）。
 - 模块：`app` / `core:{domain,speech,llm,data,designsystem}` / `feature:conversation`。
+- 本切片可用路径：首页选 Hometown → 自由对话（按住说话 + 延迟芯片）→ 结束会话 → EV 报告 → 收藏错题 → 档案今日统计。
 - 本地构建：`source /home/box/android-env.sh`（或自备 SDK）后执行 `./gradlew :app:assembleDebug`。
 - **切勿提交** `local.properties`、API Key、keystore 或录音文件。
+
+### 延迟冒烟（LatencySmoke）
+
+M1 验收用固定 3 句英文走 MockAsr → MockLlm → MockTts，统计 ASR终稿→LLM首字→TTS起播：
+
+1. **单元测试**：`./gradlew :core:domain:test`（含 `LatencySmokeTest` / `EvJsonParserTest`）
+2. **应用内**：长按首页标题「VoxCoach 首页」进入调试页，点「运行 LatencySmoke」；报告写入 `files/smoke/latency-smoke-*.md`，并打 logcat tag `LatencySmoke`
 
 ---
 
@@ -104,4 +112,4 @@ Persondev/
     └── 06-roadmap-acceptance.md
 ```
 
-> 工程代码（Android 端 / 后端）将在设计评审通过后、按 `06` 文档中的里程碑逐步加入，**当前目录不含代码**。
+> Android 端已按 `06` 里程碑落地；后端仍待 M3。
