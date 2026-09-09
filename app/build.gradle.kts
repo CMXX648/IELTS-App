@@ -14,7 +14,7 @@ android {
         minSdk = 26
         targetSdk = 37
         versionCode = 1
-        versionName = "0.2.1-m2-recording"
+        versionName = "0.2.2-m2-grammar"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -52,6 +52,7 @@ kotlin {
 
 dependencies {
     implementation(project(":feature:conversation"))
+    implementation(project(":feature:drill"))
     implementation(project(":core:domain"))
     implementation(project(":core:speech"))
     implementation(project(":core:llm"))
