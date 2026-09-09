@@ -1,0 +1,40 @@
+{
+  "id": "cal-08",
+  "title": "Technology — high band (~8.0)",
+  "topicTitle": "Technology",
+  "notes": "Near C1 oral resourcefulness; still not 'expert' 9.0.",
+  "labels": { "fc": 8.0, "lr": 8.0, "gra": 8.0, "p": 7.5 },
+  "turns": [
+    { "role": "Examiner", "text": "How has technology changed the way people learn languages?" },
+    { "role": "Candidate", "text": "It has democratised access. Learners can rehearse pronunciation with feedback apps, shadow native speakers on demand, and join communities that would have been unreachable a decade ago." },
+    { "role": "Examiner", "text": "Are there downsides?" },
+    { "role": "Candidate", "text": "Absolutely. Algorithmic feeds can trap people in simplified content, and over-reliance on instant translation may delay the hard work of retrieving vocabulary under pressure." },
+    { "role": "Examiner", "text": "What role should teachers play now?" },
+    { "role": "Candidate", "text": "Teachers become curators and coaches. They diagnose fossilised errors, design tasks that force spontaneous speech, and help learners interpret feedback that machines cannot contextualise." }
+  ],
+  "llmResponse": {
+    "schemaVer": "ev.v1",
+    "engine": { "model": "fixture", "promptVer": "rubric-2026.09" },
+    "overallBand": 8.0,
+    "dims": {
+      "fc":  { "score": 8.0, "comment": "Fluent, well-structured argumentation with natural discourse markers.", "evidence": ["Absolutely. Algorithmic feeds can trap people"] },
+      "lr":  { "score": 8.0, "comment": "Precise, low-frequency lexis used accurately.", "evidence": ["democratised access", "fossilised errors"] },
+      "gra": { "score": 8.0, "comment": "Wide range of complex forms with consistent control.", "evidence": ["help learners interpret feedback that machines cannot contextualise"] },
+      "p":   { "score": 7.5, "comment": "Text-only; assumed clear with occasional L1 colour.", "evidence": [] }
+    },
+    "items": [
+      {
+        "id": "i_01",
+        "dim": "lr",
+        "category": "nuance",
+        "quote": "delay the hard work of retrieving vocabulary under pressure",
+        "correction": "postpone the demanding work of retrieving vocabulary under pressure",
+        "why": "Optional synonym polish; original is already strong.",
+        "model": ["may postpone the demanding work of retrieving vocabulary under exam pressure"]
+      }
+    ],
+    "highlights": [
+      { "dim": "gra", "quote": "design tasks that force spontaneous speech", "note": "Clean relative clause with precise verb." }
+    ]
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "id": "cal-05",
+  "title": "Work–life balance — band 7.0 anchor",
+  "topicTitle": "Work and study",
+  "notes": "Anchor sample labelled 7.0; regression must not drift to 8.5 (direction check).",
+  "labels": { "fc": 7.0, "lr": 7.0, "gra": 7.0, "p": 7.0 },
+  "turns": [
+    { "role": "Examiner", "text": "How do you manage your time between work and study?" },
+    { "role": "Candidate", "text": "I block my calendar in advance. On weekdays I finish the most demanding tasks before lunch, and I keep evenings for reading or language practice so I do not mix contexts." },
+    { "role": "Examiner", "text": "Do you think remote work makes balance easier?" },
+    { "role": "Candidate", "text": "It can, provided people set boundaries. Without a commute I gain an hour, but if I answer messages late at night the line between rest and work disappears." },
+    { "role": "Examiner", "text": "What advice would you give to someone who feels overwhelmed?" },
+    { "role": "Candidate", "text": "I would suggest choosing two priorities for the day rather than a long list. Once those are done, smaller tasks feel less intimidating, and you still protect time for sleep." }
+  ],
+  "llmResponse": {
+    "schemaVer": "ev.v1",
+    "engine": { "model": "fixture", "promptVer": "rubric-2026.09" },
+    "overallBand": 7.0,
+    "dims": {
+      "fc":  { "score": 7.0, "comment": "Flexible development with clear staging of ideas.", "evidence": ["I block my calendar in advance"] },
+      "lr":  { "score": 7.0, "comment": "Precise topic vocabulary and natural paraphrase.", "evidence": ["the line between rest and work disappears"] },
+      "gra": { "score": 7.0, "comment": "Reliable complex structures including conditionals.", "evidence": ["provided people set boundaries"] },
+      "p":   { "score": 7.0, "comment": "Text-only; assumed well-chunked and clear.", "evidence": [] }
+    },
+    "items": [
+      {
+        "id": "i_01",
+        "dim": "fc",
+        "category": "coherence_polish",
+        "quote": "Once those are done, smaller tasks feel less intimidating",
+        "correction": "Once those are done, the remaining tasks feel less intimidating",
+        "why": "Slightly clearer referent for 'smaller tasks'.",
+        "model": ["Once the two priorities are done, everything else feels less intimidating."]
+      }
+    ],
+    "highlights": [
+      { "dim": "lr", "quote": "the line between rest and work disappears", "note": "Idiomatic framing of boundary failure." }
+    ]
+  }
+}

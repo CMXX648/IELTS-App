@@ -1,0 +1,40 @@
+{
+  "id": "cal-02",
+  "title": "Daily routine — mid-low (~5.5)",
+  "topicTitle": "Daily routine",
+  "notes": "Can narrate a day with some linking; still limited complexity.",
+  "labels": { "fc": 5.5, "lr": 5.5, "gra": 5.5, "p": 5.5 },
+  "turns": [
+    { "role": "Examiner", "text": "What does a typical weekday look like for you?" },
+    { "role": "Candidate", "text": "I usually wake up at seven. Then I take bus to work. In the morning I check emails and have meetings." },
+    { "role": "Examiner", "text": "Do you prefer mornings or evenings?" },
+    { "role": "Candidate", "text": "I prefer mornings because my mind is clearer. At night I feel tired and I just watch some videos." },
+    { "role": "Examiner", "text": "Would you change anything about your routine?" },
+    { "role": "Candidate", "text": "Yes, I want to exercise more. Now I sit too long, so maybe I will walk after dinner." }
+  ],
+  "llmResponse": {
+    "schemaVer": "ev.v1",
+    "engine": { "model": "fixture", "promptVer": "rubric-2026.09" },
+    "overallBand": 5.5,
+    "dims": {
+      "fc":  { "score": 5.5, "comment": "Generally maintains flow with basic sequencers.", "evidence": ["Then I take bus to work"] },
+      "lr":  { "score": 5.5, "comment": "Adequate for familiar topics; little paraphrase.", "evidence": ["my mind is clearer"] },
+      "gra": { "score": 5.5, "comment": "Mix of correct simple forms with occasional article slips.", "evidence": ["take bus to work"] },
+      "p":   { "score": 5.5, "comment": "Text-only; assumed generally clear.", "evidence": [] }
+    },
+    "items": [
+      {
+        "id": "i_01",
+        "dim": "gra",
+        "category": "grammar_article",
+        "quote": "Then I take bus to work.",
+        "correction": "Then I take the bus to work.",
+        "why": "Use 'the bus' for the habitual means of transport.",
+        "model": ["Then I take the bus to work."]
+      }
+    ],
+    "highlights": [
+      { "dim": "lr", "quote": "my mind is clearer", "note": "Natural reason phrase for time-of-day preference." }
+    ]
+  }
+}
