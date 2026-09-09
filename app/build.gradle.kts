@@ -14,7 +14,7 @@ android {
         minSdk = 26
         targetSdk = 37
         versionCode = 1
-        versionName = "0.2.4-m2-part3-mock"
+        versionName = "0.2.5-m2-profile-trends"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
