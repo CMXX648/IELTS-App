@@ -38,6 +38,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import com.voxcoach.core.domain.ux.NetworkUx
 
 @HiltViewModel
 class ConversationViewModel @Inject constructor(
@@ -180,7 +181,7 @@ class ConversationViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         phase = ConversationUiState.Phase.Idle,
-                        error = e.message ?: "ASR 启动失败",
+                        error = NetworkUx.userMessage(e, "ASR 启动失败"),
                         statusMessage = "ASR 不可用",
                     )
                 }
@@ -345,7 +346,7 @@ class ConversationViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         phase = ConversationUiState.Phase.Idle,
-                        error = e.message ?: "链路失败",
+                        error = NetworkUx.userMessage(e, "链路失败"),
                         statusMessage = "出错了，请检查设置",
                     )
                 }
@@ -431,8 +432,8 @@ class ConversationViewModel @Inject constructor(
                         ending = false,
                         recording = false,
                         phase = ConversationUiState.Phase.Idle,
-                        error = e.message ?: "评测失败",
-                        statusMessage = "评测失败，可稍后重试结束会话",
+                        error = NetworkUx.userMessage(e, "评测失败"),
+                        statusMessage = "评测失败，本地轮次与录音已保留，可稍后重试",
                     )
                 }
             }
