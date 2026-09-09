@@ -142,3 +142,48 @@ data class TurnLatency(
     val asrToTtsMs: Long?
         get() = if (asrFinalAt > 0 && ttsStartAt > 0) ttsStartAt - asrFinalAt else null
 }
+
+
+/** Grammar point from docs/02 §3 MVP matrix (A/B/C/E). */
+data class GrammarPoint(
+    val id: String,
+    val code: String,
+    val groupCode: String,
+    val groupTitle: String,
+    val title: String,
+    val titleZh: String,
+    val rule: String,
+    val examplesJson: String,
+    val skeleton: String,
+    val topicHint: String,
+    val sortOrder: Int = 0,
+)
+
+data class DrillAttempt(
+    val id: String,
+    val grammarPointId: String,
+    val promptId: String,
+    val userSentence: String,
+    val hit: Boolean,
+    val feedbackJson: String,
+    val triedAt: Long,
+)
+
+data class DrillJudgeResult(
+    val hit: Boolean,
+    val correction: String = "",
+    val why: String = "",
+    val model: String = "",
+) {
+    fun toFeedbackJson(): String = buildString {
+        append('{')
+        append("\"hit\":").append(hit).append(',')
+        append("\"correction\":").append(escape(correction)).append(',')
+        append("\"why\":").append(escape(why)).append(',')
+        append("\"model\":").append(escape(model))
+        append('}')
+    }
+
+    private fun escape(s: String): String =
+        "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n") + "\""
+}
