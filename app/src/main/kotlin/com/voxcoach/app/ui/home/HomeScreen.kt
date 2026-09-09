@@ -56,6 +56,7 @@ class HomeViewModel @Inject constructor(
 @Composable
 fun HomeScreen(
     onStartConversation: (topicId: String) -> Unit,
+    onStartPart1: () -> Unit = {},
     onOpenGrammar: () -> Unit = {},
     onOpenDebug: () -> Unit,
     onOpenSettings: () -> Unit = {},
@@ -64,6 +65,7 @@ fun HomeScreen(
     val topics by viewModel.topics.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var pendingTopicId by remember { mutableStateOf<String?>(null) }
+    var pendingPart1 by remember { mutableStateOf(false) }
     var showRationale by remember { mutableStateOf(false) }
 
     fun hasMic(): Boolean =
@@ -85,11 +87,13 @@ fun HomeScreen(
     ) { result ->
         val granted = result[Manifest.permission.RECORD_AUDIO] == true || hasMic()
         val topic = pendingTopicId
+        val wantPart1 = pendingPart1
         pendingTopicId = null
-        if (granted && topic != null) {
-            onStartConversation(topic)
-        } else if (!granted) {
-            showRationale = true
+        pendingPart1 = false
+        when {
+            granted && wantPart1 -> onStartPart1()
+            granted && topic != null -> onStartConversation(topic)
+            !granted -> showRationale = true
         }
     }
 
@@ -98,6 +102,17 @@ fun HomeScreen(
             onStartConversation(topicId)
         } else {
             pendingTopicId = topicId
+            pendingPart1 = false
+            showRationale = true
+        }
+    }
+
+    fun tryStartPart1() {
+        if (hasMic()) {
+            onStartPart1()
+        } else {
+            pendingPart1 = true
+            pendingTopicId = null
             showRationale = true
         }
     }
@@ -107,6 +122,7 @@ fun HomeScreen(
             onDismissRequest = {
                 showRationale = false
                 pendingTopicId = null
+                pendingPart1 = false
             },
             title = { Text("需要麦克风权限") },
             text = {
@@ -125,10 +141,19 @@ fun HomeScreen(
                     onClick = {
                         showRationale = false
                         val topic = pendingTopicId
+                        val wantPart1 = pendingPart1
                         val perms = notificationPerms()
                         if (perms.isEmpty()) {
-                            topic?.let(onStartConversation)
-                            pendingTopicId = null
+                            when {
+                                wantPart1 -> {
+                                    pendingPart1 = false
+                                    onStartPart1()
+                                }
+                                topic != null -> {
+                                    pendingTopicId = null
+                                    onStartConversation(topic)
+                                }
+                            }
                         } else {
                             permissionLauncher.launch(perms)
                         }
@@ -140,6 +165,7 @@ fun HomeScreen(
                     onClick = {
                         showRationale = false
                         pendingTopicId = null
+                        pendingPart1 = false
                     },
                 ) { Text("取消") }
             },
@@ -174,6 +200,21 @@ fun HomeScreen(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp)) {
+                    Text("模拟口试 · Part 1", style = MaterialTheme.typography.titleLarge)
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "固定 5 道考官题（银行题），进度「第 x/5 题」，答完自动出 EV 报告（CV-02 P1）",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Button(onClick = { tryStartPart1() }, modifier = Modifier.fillMaxWidth()) {
+                        Text("开始 Part 1 模拟")
+                    }
+                }
+            }
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
