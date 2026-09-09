@@ -119,11 +119,17 @@ interface MistakeDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(mistake: MistakeEntity)
 
+    @Query("SELECT * FROM mistakes WHERE id = :id LIMIT 1")
+    suspend fun get(id: String): MistakeEntity?
+
     @Query("SELECT * FROM mistakes WHERE status = 'OPEN' ORDER BY createdAt DESC")
     suspend fun listOpen(): List<MistakeEntity>
 
     @Query("SELECT * FROM mistakes WHERE status = 'OPEN' ORDER BY createdAt DESC")
     fun observeOpen(): Flow<List<MistakeEntity>>
+
+    @Query("UPDATE mistakes SET status = 'MASTERED' WHERE id = :id")
+    suspend fun markMastered(id: String)
 }
 
 @Dao

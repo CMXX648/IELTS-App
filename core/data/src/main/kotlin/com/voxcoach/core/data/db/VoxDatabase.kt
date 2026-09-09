@@ -51,7 +51,7 @@ abstract class VoxDatabase : RoomDatabase() {
     abstract fun drillAttemptDao(): DrillAttemptDao
 
     companion object {
-        const val SCHEMA_VERSION = 2
+        const val SCHEMA_VERSION = 3
         const val NAME = "voxcoach.db"
 
         fun build(context: Context): VoxDatabase =

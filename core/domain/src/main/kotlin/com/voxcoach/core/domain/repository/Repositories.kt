@@ -45,8 +45,10 @@ interface EvRepository {
 
 interface MistakeRepository {
     suspend fun insert(mistake: Mistake)
+    suspend fun get(id: String): Mistake?
     suspend fun listOpen(): List<Mistake>
     fun observeOpen(): Flow<List<Mistake>>
+    suspend fun markMastered(id: String)
 }
 
 interface ProfileRepository {
