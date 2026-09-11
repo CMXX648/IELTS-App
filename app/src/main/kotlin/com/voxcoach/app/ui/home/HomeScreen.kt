@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import com.voxcoach.core.designsystem.component.IslandState
 import com.voxcoach.core.designsystem.component.IslandNode
+import com.voxcoach.core.designsystem.component.StreakPill
+import com.voxcoach.core.designsystem.component.IslandPathConnector
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -87,7 +89,7 @@ fun HomeScreen(
     var pendingFullMock by remember { mutableStateOf(false) }
     var showRationale by remember { mutableStateOf(false) }
     // Lightweight local streak stub until profile streak lands
-    val streakDays = remember { 1 }
+    val streakDays = remember { 5 }
 
     fun hasMic(): Boolean =
         ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
@@ -252,55 +254,37 @@ fun HomeScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text("Hi, Alex", style = MaterialTheme.typography.titleLarge)
-                Text(
-                    text = "🔥 $streakDays 天连胜",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = VoxAccent,
-                )
+                StreakPill(days = streakDays)
             }
-            Spacer(Modifier.height(8.dp))
-            Text(
-                "口语闯关岛",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(24.dp))
 
-            // Vertical island path (少字)
             IslandNode(
-                title = "热身对话",
+                title = "热身",
                 state = IslandState.Done,
                 onClick = { tryStart(hometownId) },
             )
+            IslandPathConnector(zigLeft = false)
             IslandNode(
                 title = "Part 1",
-                subtitle = "5 题 · 点岛开练",
+                subtitle = "",
                 state = IslandState.Current,
                 onClick = { tryStartPart1() },
             )
+            IslandPathConnector(zigLeft = true)
             IslandNode(
-                title = "语法岛",
+                title = "语法",
                 state = IslandState.Locked,
                 onClick = onOpenGrammar,
             )
+            IslandPathConnector(zigLeft = false)
             IslandNode(
-                title = "Part 2",
-                state = IslandState.Locked,
+                title = "更远",
+                state = IslandState.Distant,
                 onClick = { tryStartPart2() },
-            )
-            IslandNode(
-                title = "Part 3",
-                state = IslandState.Distant,
-                onClick = { tryStartPart3() },
-            )
-            IslandNode(
-                title = "完整模考",
-                state = IslandState.Distant,
-                onClick = { tryStartFullMock() },
             )
 
             if (!hasMic()) {
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(16.dp))
                 Text(
                     "需要麦克风才能开练",
                     style = MaterialTheme.typography.bodySmall,
