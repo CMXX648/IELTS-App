@@ -40,6 +40,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.voxcoach.core.designsystem.component.ScoreToast
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -120,17 +121,11 @@ fun ConversationScreen(
                     color = MaterialTheme.colorScheme.primary,
                     trackColor = MaterialTheme.colorScheme.surfaceVariant,
                 )
-                if (state.turnCount > 0 && state.phase != ConversationUiState.Phase.Evaluating) {
-                    AssistChip(
-                        onClick = {},
-                        label = {
-                            Text(
-                                "+分 · 连击 ${state.turnCount}",
-                                color = MaterialTheme.colorScheme.secondary,
-                            )
-                        },
-                    )
-                }
+                ScoreToast(
+                    message = "+分 · 连击 ${state.turnCount}",
+                    token = state.turnCount.takeIf { it > 0 },
+                    visibleWhen = state.turnCount > 0 && state.phase != ConversationUiState.Phase.Evaluating,
+                )
                 if (state.phase == ConversationUiState.Phase.Evaluating) {
                     AssistChip(
                         onClick = {},
