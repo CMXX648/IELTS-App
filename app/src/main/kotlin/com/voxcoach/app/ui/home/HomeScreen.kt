@@ -43,6 +43,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
+import com.voxcoach.core.designsystem.component.TodayPracticeCard
 import com.voxcoach.core.designsystem.theme.VoxAccent
 import com.voxcoach.core.domain.model.Topic
 import com.voxcoach.core.domain.repository.TopicRepository
@@ -270,39 +271,10 @@ fun HomeScreen(
                 }
             }
 
-            // Today practice CTA
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = CardShape,
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-            ) {
-                Column(modifier = Modifier.padding(20.dp)) {
-                    Text(
-                        "今天练",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onPrimary,
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        "Part 1 模拟 · 5 道题，练完自动出报告",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f),
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    Button(
-                        onClick = { tryStartPart1() },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = CardShape,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.onPrimary,
-                            contentColor = MaterialTheme.colorScheme.primary,
-                        ),
-                    ) {
-                        Text("一键开练", style = MaterialTheme.typography.titleMedium)
-                    }
-                }
-            }
+            TodayPracticeCard(
+                subtitle = "Part 1 模拟 · 5 道题，练完自动出报告",
+                onStart = { tryStartPart1() },
+            )
 
             Text("小关卡", style = MaterialTheme.typography.titleMedium)
 
