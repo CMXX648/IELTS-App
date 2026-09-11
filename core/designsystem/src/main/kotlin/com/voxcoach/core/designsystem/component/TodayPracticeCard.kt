@@ -40,7 +40,7 @@ fun TodayPracticeCard(
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.98f else 1f,
+        targetValue = if (pressed) 0.97f else 1f,
         animationSpec = tween(durationMillis = 120),
         label = "todayPracticeScale",
     )

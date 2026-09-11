@@ -9,6 +9,8 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import com.voxcoach.core.designsystem.component.IslandState
+import com.voxcoach.core.designsystem.component.IslandNode
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -43,7 +45,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
-import com.voxcoach.core.designsystem.component.TodayPracticeCard
 import com.voxcoach.core.designsystem.theme.VoxAccent
 import com.voxcoach.core.domain.model.Topic
 import com.voxcoach.core.domain.repository.TopicRepository
@@ -232,16 +233,17 @@ fun HomeScreen(
         ?: topics.firstOrNull { it.group == "part1" }?.id
         ?: "T-hometown"
 
-    Scaffold { padding ->
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // Greeting + streak
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -249,143 +251,67 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Column {
-                    Text("你好，今天练一会儿？", style = MaterialTheme.typography.titleLarge)
-                    Text(
-                        "长按问候可开调试页",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Card(
-                    shape = CardShape,
-                    colors = CardDefaults.cardColors(containerColor = VoxAccent.copy(alpha = 0.15f)),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-                ) {
-                    Text(
-                        text = "🔥 $streakDays 天",
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = VoxAccent,
-                    )
-                }
-            }
-
-            TodayPracticeCard(
-                subtitle = "Part 1 模拟 · 5 道题，练完自动出报告",
-                onStart = { tryStartPart1() },
-            )
-
-            Text("小关卡", style = MaterialTheme.typography.titleMedium)
-
-            QuestCard(
-                title = "自由对话 · 家乡",
-                subtitle = "轻松热身，随便聊",
-                locked = false,
-                onClick = { tryStart(hometownId) },
-            )
-            QuestCard(
-                title = "语法句式",
-                subtitle = "口头产出目标句，AI 判定",
-                locked = false,
-                onClick = onOpenGrammar,
-            )
-            QuestCard(
-                title = "Part 2 独白",
-                subtitle = "Cue card + 准备 + 长独白",
-                locked = false,
-                onClick = { tryStartPart2() },
-            )
-            QuestCard(
-                title = "Part 3 讨论",
-                subtitle = "深度 5 题",
-                locked = false,
-                onClick = { tryStartPart3() },
-            )
-            QuestCard(
-                title = "完整模考",
-                subtitle = "P1 → P2 → P3 一次打通",
-                locked = true,
-                lockedHint = "先完成一次「今天练」再解锁",
-                onClick = { tryStartFullMock() },
-            )
-            QuestCard(
-                title = "错题本",
-                subtitle = "回顾收藏的纠错",
-                locked = false,
-                onClick = onOpenVault,
-            )
-
-            if (!hasMic()) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = CardShape,
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-                ) {
-                    Column(Modifier.padding(12.dp)) {
-                        Text(
-                            "尚未授予麦克风权限。开始前会引导授权；也可先去设置配置 API Key。",
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Button(
-                            onClick = onOpenSettings,
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = CardShape,
-                        ) { Text("打开设置") }
-                    }
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-        }
-    }
-}
-
-@Composable
-private fun QuestCard(
-    title: String,
-    subtitle: String,
-    locked: Boolean,
-    lockedHint: String = "暂未解锁",
-    onClick: () -> Unit,
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .alpha(if (locked) 0.55f else 1f),
-        shape = CardShape,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-        onClick = { if (!locked) onClick() },
-    ) {
-        Column(Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(title, style = MaterialTheme.typography.titleMedium)
+                Text("Hi, Alex", style = MaterialTheme.typography.titleLarge)
                 Text(
-                    if (locked) "🔒" else "▶",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (locked) MaterialTheme.colorScheme.onSurfaceVariant
-                    else MaterialTheme.colorScheme.primary,
+                    text = "🔥 $streakDays 天连胜",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = VoxAccent,
                 )
             }
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(8.dp))
             Text(
-                if (locked) lockedHint else subtitle,
+                "口语闯关岛",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            if (!locked) {
-                Spacer(Modifier.height(8.dp))
-                Button(
-                    onClick = onClick,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = CardShape,
-                ) { Text("进入") }
+            Spacer(Modifier.height(16.dp))
+
+            // Vertical island path (少字)
+            IslandNode(
+                title = "热身对话",
+                state = IslandState.Done,
+                onClick = { tryStart(hometownId) },
+            )
+            IslandNode(
+                title = "Part 1",
+                subtitle = "5 题 · 点岛开练",
+                state = IslandState.Current,
+                onClick = { tryStartPart1() },
+            )
+            IslandNode(
+                title = "语法岛",
+                state = IslandState.Locked,
+                onClick = onOpenGrammar,
+            )
+            IslandNode(
+                title = "Part 2",
+                state = IslandState.Locked,
+                onClick = { tryStartPart2() },
+            )
+            IslandNode(
+                title = "Part 3",
+                state = IslandState.Distant,
+                onClick = { tryStartPart3() },
+            )
+            IslandNode(
+                title = "完整模考",
+                state = IslandState.Distant,
+                onClick = { tryStartFullMock() },
+            )
+
+            if (!hasMic()) {
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    "需要麦克风才能开练",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Button(onClick = onOpenSettings, shape = RoundedCornerShape(16.dp)) {
+                    Text("去设置")
+                }
             }
+            Spacer(Modifier.height(24.dp))
         }
     }
 }
+

@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -94,12 +95,12 @@ fun VoxNavHost(
     val start = if (onboardingDone == true) Routes.Home else Routes.Onboarding
     val tabs = listOf(
         Tab(Routes.Home, "首页", Icons.Default.Home),
-        Tab(Routes.Profile, "档案", Icons.Default.Person),
-        Tab(Routes.Settings, "设置", Icons.Default.Settings),
+        Tab(Routes.DrillList, "练习", Icons.Default.Star),
+        Tab(Routes.Profile, "我的", Icons.Default.Person),
     )
     val backStack by navController.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
-    val showBottomBar = currentRoute in setOf(Routes.Home, Routes.Profile, Routes.Settings)
+    val showBottomBar = currentRoute in setOf(Routes.Home, Routes.Profile, Routes.DrillList)
 
     Scaffold(
         bottomBar = {
@@ -244,7 +245,10 @@ fun VoxNavHost(
                 ReportScreen(onBack = { navController.popBackStack(Routes.Home, inclusive = false) })
             }
             composable(Routes.Profile) {
-                ProfileScreen()
+                ProfileScreen(
+                    onOpenSettings = { navController.navigate(Routes.Settings) },
+                    onOpenVault = { navController.navigate(Routes.Vault) },
+                )
             }
             composable(Routes.Settings) {
                 SettingsScreen(
