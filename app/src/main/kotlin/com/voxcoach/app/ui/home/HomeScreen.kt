@@ -9,26 +9,33 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -36,6 +43,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
+import com.voxcoach.core.designsystem.theme.VoxAccent
 import com.voxcoach.core.domain.model.Topic
 import com.voxcoach.core.domain.repository.TopicRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -51,6 +59,8 @@ class HomeViewModel @Inject constructor(
     val topics: StateFlow<List<Topic>> = topicRepository.observeTopics()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 }
+
+private val CardShape = RoundedCornerShape(16.dp)
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -74,6 +84,8 @@ fun HomeScreen(
     var pendingPart3 by remember { mutableStateOf(false) }
     var pendingFullMock by remember { mutableStateOf(false) }
     var showRationale by remember { mutableStateOf(false) }
+    // Lightweight local streak stub until profile streak lands
+    val streakDays = remember { 1 }
 
     fun hasMic(): Boolean =
         ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
@@ -127,54 +139,30 @@ fun HomeScreen(
     }
 
     fun tryStartPart1() {
-        if (hasMic()) {
-            onStartPart1()
-        } else {
-            pendingPart1 = true
-            pendingPart2 = false
-            pendingPart3 = false
-            pendingFullMock = false
-            pendingTopicId = null
-            showRationale = true
+        if (hasMic()) onStartPart1() else {
+            pendingPart1 = true; pendingPart2 = false; pendingPart3 = false
+            pendingFullMock = false; pendingTopicId = null; showRationale = true
         }
     }
 
     fun tryStartPart2() {
-        if (hasMic()) {
-            onStartPart2()
-        } else {
-            pendingPart2 = true
-            pendingPart1 = false
-            pendingPart3 = false
-            pendingFullMock = false
-            pendingTopicId = null
-            showRationale = true
+        if (hasMic()) onStartPart2() else {
+            pendingPart2 = true; pendingPart1 = false; pendingPart3 = false
+            pendingFullMock = false; pendingTopicId = null; showRationale = true
         }
     }
 
     fun tryStartPart3() {
-        if (hasMic()) {
-            onStartPart3()
-        } else {
-            pendingPart3 = true
-            pendingPart1 = false
-            pendingPart2 = false
-            pendingFullMock = false
-            pendingTopicId = null
-            showRationale = true
+        if (hasMic()) onStartPart3() else {
+            pendingPart3 = true; pendingPart1 = false; pendingPart2 = false
+            pendingFullMock = false; pendingTopicId = null; showRationale = true
         }
     }
 
     fun tryStartFullMock() {
-        if (hasMic()) {
-            onStartFullMock()
-        } else {
-            pendingFullMock = true
-            pendingPart1 = false
-            pendingPart2 = false
-            pendingPart3 = false
-            pendingTopicId = null
-            showRationale = true
+        if (hasMic()) onStartFullMock() else {
+            pendingFullMock = true; pendingPart1 = false; pendingPart2 = false
+            pendingPart3 = false; pendingTopicId = null; showRationale = true
         }
     }
 
@@ -212,26 +200,11 @@ fun HomeScreen(
                         val perms = notificationPerms()
                         if (perms.isEmpty()) {
                             when {
-                                wantPart1 -> {
-                                    pendingPart1 = false
-                                    onStartPart1()
-                                }
-                                wantPart2 -> {
-                                    pendingPart2 = false
-                                    onStartPart2()
-                                }
-                                wantPart3 -> {
-                                    pendingPart3 = false
-                                    onStartPart3()
-                                }
-                                wantFullMock -> {
-                                    pendingFullMock = false
-                                    onStartFullMock()
-                                }
-                                topic != null -> {
-                                    pendingTopicId = null
-                                    onStartConversation(topic)
-                                }
+                                wantPart1 -> { pendingPart1 = false; onStartPart1() }
+                                wantPart2 -> { pendingPart2 = false; onStartPart2() }
+                                wantPart3 -> { pendingPart3 = false; onStartPart3() }
+                                wantFullMock -> { pendingFullMock = false; onStartFullMock() }
+                                topic != null -> { pendingTopicId = null; onStartConversation(topic) }
                             }
                         } else {
                             permissionLauncher.launch(perms)
@@ -254,172 +227,192 @@ fun HomeScreen(
         )
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "VoxCoach 首页",
-                        modifier = Modifier.combinedClickable(
-                            onClick = {},
-                            onLongClick = onOpenDebug,
-                        ),
-                    )
-                },
-            )
-        },
-    ) { padding ->
+    val hometownId = topics.firstOrNull { it.code == "hometown" }?.id
+        ?: topics.firstOrNull { it.group == "part1" }?.id
+        ?: "T-hometown"
+
+    Scaffold { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp),
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text("选择话题开始自由对话（CV-01）", style = MaterialTheme.typography.titleMedium)
-            Text(
-                "长按标题可打开延迟冒烟调试页",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            // Greeting + streak
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .combinedClickable(onClick = {}, onLongClick = onOpenDebug),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column {
+                    Text("你好，今天练一会儿？", style = MaterialTheme.typography.titleLarge)
+                    Text(
+                        "长按问候可开调试页",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Card(
+                    shape = CardShape,
+                    colors = CardDefaults.cardColors(containerColor = VoxAccent.copy(alpha = 0.15f)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                ) {
+                    Text(
+                        text = "🔥 $streakDays 天",
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = VoxAccent,
+                    )
+                }
+            }
+
+            // Today practice CTA
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = CardShape,
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+            ) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Text(
+                        "今天练",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "Part 1 模拟 · 5 道题，练完自动出报告",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f),
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Button(
+                        onClick = { tryStartPart1() },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = CardShape,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.onPrimary,
+                            contentColor = MaterialTheme.colorScheme.primary,
+                        ),
+                    ) {
+                        Text("一键开练", style = MaterialTheme.typography.titleMedium)
+                    }
+                }
+            }
+
+            Text("小关卡", style = MaterialTheme.typography.titleMedium)
+
+            QuestCard(
+                title = "自由对话 · 家乡",
+                subtitle = "轻松热身，随便聊",
+                locked = false,
+                onClick = { tryStart(hometownId) },
             )
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp)) {
-                    Text("模拟口试 · Part 1", style = MaterialTheme.typography.titleLarge)
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        "固定 5 道考官题（银行题），进度「第 x/5 题」，答完自动出 EV 报告（CV-02 P1）",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Button(onClick = { tryStartPart1() }, modifier = Modifier.fillMaxWidth()) {
-                        Text("开始 Part 1 模拟")
-                    }
-                }
-            }
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp)) {
-                    Text("模拟口试 · Part 2", style = MaterialTheme.typography.titleLarge)
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        "Cue card + 60s 准备 + 最长 120s 独白，连续录音与 ASR，结束后自动 EV（CV-02 P2）",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Button(onClick = { tryStartPart2() }, modifier = Modifier.fillMaxWidth()) {
-                        Text("开始 Part 2 模拟")
-                    }
-                }
-            }
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp)) {
-                    Text("模拟口试 · Part 3", style = MaterialTheme.typography.titleLarge)
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        "承接 Part 2 主题的深度讨论 5 题，进度「第 x/5 题」，答完自动 EV（CV-02 P3）",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Button(onClick = { tryStartPart3() }, modifier = Modifier.fillMaxWidth()) {
-                        Text("开始 Part 3 模拟")
-                    }
-                }
-            }
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp)) {
-                    Text("完整模考", style = MaterialTheme.typography.titleLarge)
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        "Part 1（5 题）→ Part 2（准备+独白）→ Part 3（5 题）不离场，结束后一次统一 EV（MOCK）",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Button(onClick = { tryStartFullMock() }, modifier = Modifier.fillMaxWidth()) {
-                        Text("开始完整模考")
-                    }
-                }
-            }
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .combinedClickable(onClick = onOpenGrammar),
-            ) {
-                Column(Modifier.padding(16.dp)) {
-                    Text("语法句式", style = MaterialTheme.typography.titleLarge)
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        "口头产出目标句式，AI 判定命中与纠错（GR-01/02/03）",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Button(onClick = onOpenGrammar, modifier = Modifier.fillMaxWidth()) {
-                        Text("进入语法练习")
-                    }
-                }
-            }
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .combinedClickable(onClick = onOpenVault),
-            ) {
-                Column(Modifier.padding(16.dp)) {
-                    Text("错题本", style = MaterialTheme.typography.titleLarge)
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        "查看已收藏错题：原文、修正、原因与维度（VB-01/02）",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Button(onClick = onOpenVault, modifier = Modifier.fillMaxWidth()) {
-                        Text("打开错题本")
-                    }
-                }
-            }
+            QuestCard(
+                title = "语法句式",
+                subtitle = "口头产出目标句，AI 判定",
+                locked = false,
+                onClick = onOpenGrammar,
+            )
+            QuestCard(
+                title = "Part 2 独白",
+                subtitle = "Cue card + 准备 + 长独白",
+                locked = false,
+                onClick = { tryStartPart2() },
+            )
+            QuestCard(
+                title = "Part 3 讨论",
+                subtitle = "深度 5 题",
+                locked = false,
+                onClick = { tryStartPart3() },
+            )
+            QuestCard(
+                title = "完整模考",
+                subtitle = "P1 → P2 → P3 一次打通",
+                locked = true,
+                lockedHint = "先完成一次「今天练」再解锁",
+                onClick = { tryStartFullMock() },
+            )
+            QuestCard(
+                title = "错题本",
+                subtitle = "回顾收藏的纠错",
+                locked = false,
+                onClick = onOpenVault,
+            )
+
             if (!hasMic()) {
-                Card(modifier = Modifier.fillMaxWidth()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = CardShape,
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                ) {
                     Column(Modifier.padding(12.dp)) {
                         Text(
-                            "尚未授予麦克风权限。开始对话前会引导授权；" +
-                                "也可先到设置配置 LLM。",
+                            "尚未授予麦克风权限。开始前会引导授权；也可先去设置配置 API Key。",
                             style = MaterialTheme.typography.bodyMedium,
                         )
                         Spacer(Modifier.height(8.dp))
-                        Button(onClick = onOpenSettings, modifier = Modifier.fillMaxWidth()) {
-                            Text("打开设置")
-                        }
+                        Button(
+                            onClick = onOpenSettings,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = CardShape,
+                        ) { Text("打开设置") }
                     }
                 }
             }
             Spacer(Modifier.height(8.dp))
-            val list = topics.filter { it.group == "part1" }.ifEmpty {
-                listOf(
-                    Topic(
-                        id = "T-hometown",
-                        code = "hometown",
-                        title = "Hometown",
-                        titleZh = "家乡",
-                        group = "part1",
-                    ),
+        }
+    }
+}
+
+@Composable
+private fun QuestCard(
+    title: String,
+    subtitle: String,
+    locked: Boolean,
+    lockedHint: String = "暂未解锁",
+    onClick: () -> Unit,
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .alpha(if (locked) 0.55f else 1f),
+        shape = CardShape,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        onClick = { if (!locked) onClick() },
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(title, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    if (locked) "🔒" else "▶",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (locked) MaterialTheme.colorScheme.onSurfaceVariant
+                    else MaterialTheme.colorScheme.primary,
                 )
             }
-            list.forEach { topic ->
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text("${topic.title}（${topic.titleZh}）", style = MaterialTheme.typography.titleLarge)
-                        Spacer(Modifier.height(8.dp))
-                        Button(
-                            onClick = { tryStart(topic.id) },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text("开始自由对话")
-                        }
-                    }
-                }
+            Spacer(Modifier.height(4.dp))
+            Text(
+                if (locked) lockedHint else subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (!locked) {
+                Spacer(Modifier.height(8.dp))
+                Button(
+                    onClick = onClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = CardShape,
+                ) { Text("进入") }
             }
         }
     }

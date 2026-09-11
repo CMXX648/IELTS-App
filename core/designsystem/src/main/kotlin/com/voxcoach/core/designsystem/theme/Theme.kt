@@ -10,16 +10,20 @@ private val LightColors = lightColorScheme(
     primary = VoxPrimary,
     onPrimary = VoxOnPrimary,
     secondary = VoxSecondary,
+    onSecondary = VoxOnPrimary,
+    tertiary = VoxAccent,
     background = VoxBackground,
     surface = VoxSurface,
     onBackground = VoxOnBackground,
     onSurface = VoxOnBackground,
+    onSurfaceVariant = VoxMuted,
     error = VoxError,
 )
 
 private val DarkColors = darkColorScheme(
     primary = VoxPrimary,
     secondary = VoxSecondary,
+    tertiary = VoxAccent,
     error = VoxError,
 )
 
