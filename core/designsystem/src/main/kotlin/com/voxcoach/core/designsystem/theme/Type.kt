@@ -7,21 +7,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
 /**
- * Chinese-friendly typography stubs: rely on platform default (Noto/Roboto + CJK fallback).
+ * Chinese-friendly typography: title 24 / section 18 / body 16 / caption 13.
  * Practice content stays English; chrome can be Chinese.
  */
 val VoxTypography = Typography(
     displaySmall = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Bold,
-        fontSize = 32.sp,
-        lineHeight = 40.sp,
+        fontSize = 24.sp,
+        lineHeight = 32.sp,
     ),
     titleLarge = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.SemiBold,
-        fontSize = 22.sp,
-        lineHeight = 28.sp,
+        fontSize = 24.sp,
+        lineHeight = 32.sp,
     ),
     titleMedium = TextStyle(
         fontFamily = FontFamily.SansSerif,
@@ -38,13 +38,25 @@ val VoxTypography = Typography(
     bodyMedium = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Normal,
-        fontSize = 14.sp,
-        lineHeight = 20.sp,
+        fontSize = 16.sp,
+        lineHeight = 22.sp,
+    ),
+    bodySmall = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.Normal,
+        fontSize = 13.sp,
+        lineHeight = 18.sp,
     ),
     labelLarge = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Medium,
-        fontSize = 14.sp,
-        lineHeight = 20.sp,
+        fontSize = 16.sp,
+        lineHeight = 22.sp,
+    ),
+    labelMedium = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.Medium,
+        fontSize = 13.sp,
+        lineHeight = 18.sp,
     ),
 )

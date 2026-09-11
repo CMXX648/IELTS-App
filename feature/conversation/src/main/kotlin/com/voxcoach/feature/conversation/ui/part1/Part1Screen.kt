@@ -118,10 +118,42 @@ fun Part1Screen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+                Text(
+                    text = "关卡进度 · ${state.progressLabel}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 LinearProgressIndicator(
                     progress = { progress.coerceIn(0f, 1f) },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(10.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
                 )
+                if (state.answeredCount > 0 && state.phase != Part1UiState.Phase.Evaluating) {
+                    AssistChip(
+                        onClick = {},
+                        label = {
+                            Text(
+                                "+分 · 连击 ${state.answeredCount}",
+                                color = MaterialTheme.colorScheme.secondary,
+                            )
+                        },
+                    )
+                }
+                if (state.phase == Part1UiState.Phase.Evaluating) {
+                    AssistChip(
+                        onClick = {},
+                        label = { Text("⭐ 本关完成，正在生成报告…") },
+                    )
+                }
+                state.error?.let { err ->
+                    AssistChip(
+                        onClick = {},
+                        label = { Text("没关系，可以再试一次") },
+                    )
+                }
                 Text(
                     text = state.statusMessage,
                     style = MaterialTheme.typography.titleMedium,

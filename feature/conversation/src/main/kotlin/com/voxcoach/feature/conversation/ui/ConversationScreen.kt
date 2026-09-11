@@ -22,6 +22,7 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -104,6 +105,38 @@ fun ConversationScreen(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
+                val turnGoal = 5
+                val turnProgress = (state.turnCount.toFloat() / turnGoal).coerceIn(0f, 1f)
+                Text(
+                    text = "关卡进度 · 第 ${state.turnCount} / $turnGoal 轮",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                LinearProgressIndicator(
+                    progress = { turnProgress },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(10.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                )
+                if (state.turnCount > 0 && state.phase != ConversationUiState.Phase.Evaluating) {
+                    AssistChip(
+                        onClick = {},
+                        label = {
+                            Text(
+                                "+分 · 连击 ${state.turnCount}",
+                                color = MaterialTheme.colorScheme.secondary,
+                            )
+                        },
+                    )
+                }
+                if (state.phase == ConversationUiState.Phase.Evaluating) {
+                    AssistChip(
+                        onClick = {},
+                        label = { Text("⭐ 练习完成，正在生成报告…") },
+                    )
+                }
                 Text(
                     text = state.statusMessage,
                     style = MaterialTheme.typography.titleMedium,
