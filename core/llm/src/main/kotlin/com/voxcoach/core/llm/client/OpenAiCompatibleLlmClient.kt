@@ -55,6 +55,7 @@ class OpenAiCompatibleLlmClient(
         val httpRequest = Request.Builder()
             .url(joinUrl(cfg.baseUrl, "/v1/chat/completions"))
             .header("Authorization", "Bearer ${cfg.apiKey}")
+            .header("api-key", cfg.apiKey)
             .header("Content-Type", "application/json")
             .header("Accept", "text/event-stream")
             .post(body.toRequestBody(JSON_MEDIA))
@@ -102,6 +103,7 @@ class OpenAiCompatibleLlmClient(
         val httpRequest = Request.Builder()
             .url(joinUrl(cfg.baseUrl, "/v1/chat/completions"))
             .header("Authorization", "Bearer ${cfg.apiKey}")
+            .header("api-key", cfg.apiKey)
             .header("Content-Type", "application/json")
             .post(body.toRequestBody(JSON_MEDIA))
             .build()
@@ -165,8 +167,8 @@ class OpenAiCompatibleLlmClient(
 
         fun defaultClient(): OkHttpClient = OkHttpClient.Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(120, TimeUnit.SECONDS)
-            .writeTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(180, TimeUnit.SECONDS)
+            .writeTimeout(60, TimeUnit.SECONDS)
             .build()
 
         fun joinUrl(base: String, path: String): String {

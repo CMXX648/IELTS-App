@@ -32,6 +32,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.voxcoach.core.domain.model.LlmEndpointConfig
+import com.voxcoach.core.domain.model.MimoDefaults
 import com.voxcoach.core.domain.settings.LlmSettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -50,9 +51,9 @@ class SettingsViewModel @Inject constructor(
         LlmEndpointConfig("", "", ""),
     )
 
-    fun save(baseUrl: String, model: String, apiKey: String, onDone: () -> Unit) {
+    fun save(baseUrl: String, apiKey: String, onDone: () -> Unit) {
         viewModelScope.launch {
-            repository.update(baseUrl, model, apiKey)
+            repository.update(baseUrl, MimoDefaults.CHAT_MODEL, apiKey)
             onDone()
         }
     }
@@ -66,21 +67,19 @@ fun SettingsScreen(
 ) {
     val cfg by viewModel.config.collectAsStateWithLifecycle()
     var baseUrl by remember { mutableStateOf("") }
-    var model by remember { mutableStateOf("") }
     var apiKey by remember { mutableStateOf("") }
     var savedHint by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(cfg) {
         baseUrl = cfg.baseUrl
-        model = cfg.model
         apiKey = cfg.apiKey
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("LLM 设置") },
+                title = { Text("MiMo 设置") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
@@ -95,22 +94,13 @@ fun SettingsScreen(
                 .padding(padding)
                 .padding(16.dp),
         ) {
-            Text("ST-01：API Key 经 Android Keystore AES/GCM 加密存本机；Base URL / Model 存 DataStore。切勿提交到 Git。")
+            Text("ST-01：填写 MiMo Base URL 与 API Key。对话默认 mimo-v2.5，ASR/TTS 固定 mimo-v2.5-asr / mimo-v2.5-tts，无需手填模型。Key 经 Android Keystore AES/GCM 加密存本机。")
             Spacer(Modifier.height(12.dp))
             OutlinedTextField(
                 value = baseUrl,
                 onValueChange = { baseUrl = it },
                 label = { Text("Base URL") },
-                placeholder = { Text("https://api.deepseek.com") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-            )
-            Spacer(Modifier.height(8.dp))
-            OutlinedTextField(
-                value = model,
-                onValueChange = { model = it },
-                label = { Text("Model") },
-                placeholder = { Text("deepseek-chat") },
+                placeholder = { Text(MimoDefaults.BASE_URL) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
             )
@@ -126,7 +116,7 @@ fun SettingsScreen(
             Spacer(Modifier.height(16.dp))
             Button(
                 onClick = {
-                    viewModel.save(baseUrl, model, apiKey) {
+                    viewModel.save(baseUrl, apiKey) {
                         savedHint = true
                         scope.launch { /* keep UI responsive */ }
                     }

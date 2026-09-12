@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.voxcoach.core.domain.model.LlmEndpointConfig
+import com.voxcoach.core.domain.model.MimoDefaults
 import com.voxcoach.core.domain.security.SecureKeys
 import com.voxcoach.core.domain.security.SecureStringStore
 import com.voxcoach.core.domain.settings.LlmSettingsRepository
@@ -26,9 +27,10 @@ private val Context.llmSettingsStore: DataStore<Preferences> by preferencesDataS
 )
 
 /**
- * ST-01 LLM settings: baseUrl/model in DataStore (plaintext); apiKey via
- * [SecureStringStore] (AndroidKeyStore AES/GCM). One-shot migration clears any
- * legacy plaintext `api_key` preference.
+ * ST-01 settings: baseUrl in DataStore (plaintext); apiKey via
+ * [SecureStringStore] (AndroidKeyStore AES/GCM). Chat/ASR/TTS models are
+ * hardcoded MiMo-V2.5 IDs. One-shot migration clears any legacy plaintext
+ * `api_key` preference.
  */
 @Singleton
 class DataStoreLlmSettingsRepository @Inject constructor(
@@ -58,7 +60,7 @@ class DataStoreLlmSettingsRepository @Inject constructor(
             emit(
                 LlmEndpointConfig(
                     baseUrl = prefs[Keys.baseUrl].orEmpty().ifBlank { DEFAULT_BASE_URL },
-                    model = prefs[Keys.model].orEmpty().ifBlank { DEFAULT_MODEL },
+                    model = DEFAULT_MODEL,
                     apiKey = secureStore.get(SecureKeys.LLM_API_KEY).orEmpty(),
                 ),
             )
@@ -74,7 +76,7 @@ class DataStoreLlmSettingsRepository @Inject constructor(
         }
         store.edit { prefs ->
             prefs[Keys.baseUrl] = baseUrl.trim()
-            prefs[Keys.model] = model.trim()
+            prefs[Keys.model] = DEFAULT_MODEL
             prefs.remove(Keys.apiKey)
             prefs[Keys.apiKeyRevision] = (prefs[Keys.apiKeyRevision] ?: 0) + 1
         }
@@ -105,7 +107,7 @@ class DataStoreLlmSettingsRepository @Inject constructor(
     }
 
     companion object {
-        const val DEFAULT_BASE_URL = "https://api.deepseek.com"
-        const val DEFAULT_MODEL = "deepseek-chat"
+        const val DEFAULT_BASE_URL = MimoDefaults.BASE_URL
+        const val DEFAULT_MODEL = MimoDefaults.CHAT_MODEL
     }
 }

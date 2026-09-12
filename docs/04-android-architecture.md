@@ -2,7 +2,7 @@
 
 | 项目 | 内容 |
 |---|---|
-| 文档版本 | v0.9 |
+| 文档版本 | v0.9.1（默认引擎改为 MiMo-V2.5 ASR/TTS；ST-01 只填 URL+Key） |
 | 关联 | 03 功能规格（页面与状态机在此落地）、05 后端契约（同步与评测代理）、README 术语表 |
 | 工程基线 | Kotlin + Jetpack Compose + Material 3；compileSdk 37 / targetSdk 37 / minSdk 26 |
 
@@ -100,49 +100,49 @@ interface LlmClient {
 
 ---
 
-## 3. ASR 层（核心：边说边显字 + 轮次端点）
+## 3. ASR 层（核心：按住说话 → 松手识别 + 轮次端点）
 
 ### 3.1 引擎候选与选择策略
 
-| 引擎 | 类型 | partial | 离线 | 词级时间戳 | 依赖/限制 |
-|---|---|---|---|---|---|
-| **System SpeechRecognizer** | 系统服务(Google) | ✅ | 下载英文离线包后✅ | ❌（句级） | 需 GMS/Google App；识别质量与机型相关；**首选** |
-| ML Kit Speech Recognition | 端侧模型 | ✅ | ✅ | ❌ | 需 Google Play services（或 bundled）；minSdk 23+；英文模型可下载 |
-| Cloud ASR（腾讯/阿里/Azure 等） | 云端 | ✅ | ❌ | ✅（多数支持） | 需网络 + 计费 + 服务端 key 配置；词级时间戳对逐句点评有增量价值 |
+| 引擎 | 类型 | 说话中 partial | 离线 | 当前状态 |
+|---|---|---|---|---|
+| **MiMo-V2.5 ASR**（`mimo-v2.5-asr`） | 云端，OpenAI 兼容 chat/completions | ❌ 松手后出结果 | ❌ 需网络 | **默认已绑定** |
+| System SpeechRecognizer | 系统服务(Google) | ✅ | 离线包后✅ | 代码仍在 `SystemAsrEngine`，**未绑定** |
+| ML Kit Speech Recognition | 端侧模型 | ✅ | ✅ | 未接入 |
 
-**策略（抽象 + 自动降级）**：
-1. 启动时 `CapabilityProbe` 探测：系统引擎是否可用 → ML Kit 是否已装/可下 → 云端 ASR 是否配置。
-2. 优先级链：System（首选，交互最成熟）→ ML Kit → Cloud ASR；会话中任一引擎 `onError` 重试 2 次后沿链降级并提示。
-3. 语言：`en-GB`（英音，贴合雅思），离线包下载在设置页引导。
+**策略（当前实现，团队按此开发）**：
+1. Hilt 绑定 `MimoAsrEngine`。按住说话采集 16 kHz PCM；松开后把本段 WAV（Base64 Data URL，上限约 7.5MB 二进制）POST 到设置中的 Base URL `/v1/chat/completions`，`model=mimo-v2.5-asr`，`asr_options.language=en`。
+2. 会话全程本地 wav 与识别 **共用同一路 AudioRecord**（`SessionAudioCapture.pcmByteCursor` 切片），禁止再开第二路 mic。识别片段发往用户配置的 MiMo 端点，**不上传自有 2C2G 同步服务器**。
+3. 无 Key / 无网：启动识别即失败，UI 走 SY-03 中文提示。抽象接口 `AsrEngine` 仍可替换，但不要在未改绑定的情况下假设系统引擎生效。
 
 ### 3.2 「实时」体验实现要点
 
-- **partial 上屏**：`AsrPartial` 携带文本与 `isFinal`；UI 在用户气泡灰字实时替换；停顿 600–900ms 无新 partial 且置信度稳定 → 自动封口为 final（可调）。
-- **轮次端点（自动说完判定）**：优先用引擎 endpointer（`SpeechRecognizer` 无稳定句级回调时，用 `onRmsChanged` + 能量阈值/静音计时自研轻量 VAD，仅作端点参考，不做识别）。
-- **长句防切**：只对「用户主动松手」或「静音 ≥ 阈值（默认 800ms，可配 400–1200）」触发 end-of-turn；避免把 Part 2 长独白切成碎片（Part 2 模式上调阈值 / 强制「说完了」按钮）。
+- **上屏**：松手后先 `AsrPartial("正在识别…")`，识别成功再发 `AsrFinal`。不要实现「说话过程中词级灰字」除非重新接入流式 ASR。
+- **轮次端点**：按住说话 = 松手封口；Part 2 = 「说完了」或 120s。不要在 MiMo 路径上对静音重启 ASR（会截断长独白）。
+- **长句防切**：Part 2 整段一次识别，禁止按系统引擎方式 `restartAsrListen`。
 - **抗误识编辑**：final 后保留句级「可编辑」入口（03 §2.3），编辑文本注入 LLM，录音不动。
 
-### 3.3 录音管线（与 ASR 并行，独立于识别）
+### 3.3 录音管线（与 ASR 共用麦克风）
 
 ```mermaid
 flowchart LR
-    AudioRecord(MediaRecorder/AudioRecord 44.1k) --> W[写盘 .m4a AAC]
+    AudioRecord(AudioRecord 16k PCM) --> W[写盘 .wav]
     AudioRecord --> E[能量/RMS 供声波动画]
     W --> SEG[句段索引: turnId/startMs/endMs]
     SEG --> DB[(Room SessionAudio)]
 ```
-- 会话全程连续录音；每 Turn 记时间戳；崩溃后凭索引可恢复、可拼接。
-- Part 2/口语场景的麦克风采样建议 16kHz 起，如走云端 ASR 按厂商建议降采样编码。
+- 会话全程连续录音（16 kHz PCM → wav）；每 Turn 记 `elapsedMs`；崩溃后文本仍在 Room，音频可能不完整。
+- ASR 在会话录音进行中时 **切片同一 PCM 缓冲**，不要再 `AudioRecord` 抢麦。无会话录音时（如 GR 单句）才单独开 `UtteranceAudioRecorder`。
 
 ---
 
 ## 4. TTS 层
 
-- 默认 **System TextToSpeech**：`en-GB` 声音优先（贴合英音）；`setSpeechRate` 0.8–1.0 学习用慢速；`KEY_PARAM_PAN` 等不依赖。
-- **流式播报队列**：LLM 流式收句中，按「句号/问号」边界成句入队即播（首句 < 300ms 起播），实现「边收边播」。
-- **barge-in**：用户按下麦克风 → `stopAll()` 清队 → 立即进入 LISTENING；把「被打断的句尾」事件记入上下文，AI 后续不重复已说内容。
-- 录音与 TTS 互斥策略：录音期间 TTS 静默（声学隔离），播放期间麦克风按键允许打断。
-- 备选云端 TTS：抽象后按需接入（低延迟网络不稳时本地优先）。
+- 默认 **MiMo-V2.5 TTS**（`MimoTtsEngine`，`model=mimo-v2.5-tts`，预置音色 `Chloe`，SSE `audio.format=pcm16` @ 24 kHz，`AudioTrack` 播放）。与对话共用设置中的 Base URL + API Key。
+- assistant 消息 = 要合成的英文；user 消息 = 英音考官风格指令（`MimoDefaults.TTS_STYLE`）。
+- **流式播报队列**（产品目标）：LLM 流式按句入队即播。当前实现多为整段回复后再 TTS。
+- **barge-in**（P1）：按下麦克风应 `ttsEngine.stopAll()`；完整 barge-in 未做。
+- `SystemTtsEngine` 仍在仓库，**未绑定**。
 
 ---
 
@@ -151,13 +151,13 @@ flowchart LR
 ### 5.1 统一客户端 `LlmClient`
 
 - 协议：OpenAI 兼容 `/v1/chat/completions`，`stream:true` 走 **SSE**（OkHttp 手写解析 ~150 行，避免重依赖；也可选社区 SDK，工程定稿）。
-- 配置（ST-01）：`baseUrl / model / apiKey / temperature`；**apiKey 用 Android Keystore AES/GCM 封装存储**（`security-crypto` 已停维护，不引入）。
+- 配置（ST-01）：设置页只填 `baseUrl / apiKey`；对话模型固定 `mimo-v2.5`，ASR/TTS 固定 `mimo-v2.5-asr` / `mimo-v2.5-tts`。**apiKey 用 Android Keystore AES/GCM 封装存储**。
 - 三档用法：
   | 用途 | 模型档建议 | 输出形态 | 预算 |
   |---|---|---|---|
-  | 实时对话 | 中端快模型（如 deepseek-chat 档） | 流式文本 + 内嵌 `hint` 可选字段 | 一轮 ≈ 400–800 token |
-  | GR 单句判定 | 同对话档 | JSON 小对象 | ≤ 400 token/句 |
-  | EV 四维评测 | 强模型（如 deepseek-reasoner 档/OpenAI 档） | JSON Schema 结构化 | 一次 ≈ 2–4k token |
+  | 实时对话 | `mimo-v2.5`（固定，不手填） | 流式文本 | 一轮 ≈ 400–800 token |
+  | GR 单句判定 | 同左 | JSON 小对象 | ≤ 400 token/句 |
+  | EV 四维评测 | 同左（暂不拆强模型） | JSON Schema 结构化 | 一次 ≈ 2–4k token |
 - **系统提示工程**：对话（考官人格 + 话题 + Stage + 目标语法 + 用户画像摘要 + 打断纪律）；EV（四维 Rubric 原文 + 证据强制 + 0.5 档规则 + JSON Schema 约束）。Prompt 版本号随 EV 结果落库（03 §8）。
 
 ### 5.2 上下文管理（成本与质量平衡）
@@ -168,7 +168,7 @@ flowchart LR
 
 ### 5.3 安全边界（Key 与调用路径）
 
-- **模式 A（直连，默认）**：App 直接 HTTPS 调云端 LLM；Key 存本机 Keystore；适合 DeepSeek/混元等国内可直连端点。
+- **模式 A（直连，默认）**：App 直接 HTTPS 调用户配置的 MiMo 端点（对话 / ASR / TTS 同一 Key）；Key 存本机 Keystore。
 - **模式 B（服务器代理，可选）**：App → 自有服务器 `/llm/*` → 云端 LLM；Key 放服务器环境变量；App 只持服务器凭据。用于「不想在设备上放 Key」或需统一审计时。详见 05 §6。
 - 两种模式共用同一 `LlmClient` 抽象，仅 `EndpointProvider` 不同。
 
@@ -244,7 +244,7 @@ erDiagram
 
 - 识别/播报空闲 > 30s 未进入聆听即 `sleep`（引擎释放）；仅在按下/聆听态持有部分 wakelock。
 - LLM 流式用增量解析，不缓存整段超长字符串；EV 大 JSON 用 `kotlinx.serialization` 流式/懒解析。
-- 录音文件按 m4a 落盘 + 句索引内存缓冲（≤2MB 驻留），避免 OOM。
+- 录音文件按 wav 落盘；会话 PCM 驻留内存至 `stop()`（注意超长会话内存）。
 
 ---
 
@@ -264,8 +264,9 @@ erDiagram
 
 | 风险 | 影响 | 预案 |
 |---|---|---|
-| 设备无 GMS / 系统 ASR 不可用 | 对话不可识别 | 探测 + ML Kit（bundled 下载）→ 云端 ASR 降级链；设置页明示当前引擎 |
-| System TTS 英音音质/缺失 | 示范句效果差 | 音色偏好设置 + 云端 TTS 备用抽象（P2） |
+| MiMo 端点不可达 / Key 无效 | 对话、识别、播报全断 | SY-03 中文提示；可结束会话保留本地轮次与 wav；设置页检查 URL/Key |
+| 按住说话无转写 | 空音频或 ASR HTTP 失败 | 空段不请求；失败展示 NetworkUx，不要静默成「未识别到内容」 |
+| 双开麦克风 | ASR 采集失败 | 会话录音与 ASR 必须共用 PCM；禁止再启第二路 AudioRecord |
 | Compose BOM 版本与 AGP 不匹配 | 编译失败 | 用 Android Studio 模板锁定版本再升 compileSdk 37；冻结于 libs.versions.toml |
 | 评测 JSON 偶发不合 Schema | EV 失败 | LLM 层做 `retry×2 + 宽容解析`，失败入「待重试」，不丢会话 |
 | 录音文件损坏（异常退出） | 复盘残缺 | 分段写 + 启动自检（破损段丢弃，文本留存不受影响） |

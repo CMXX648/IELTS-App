@@ -111,11 +111,7 @@ class FullMockViewModel @Inject constructor(
                         _uiState.update {
                             it.copy(partialTranscript = joined, finalTranscript = joined)
                         }
-                        if (!finishingSpeak &&
-                            _uiState.value.phase == FullMockUiState.Phase.P2Speaking
-                        ) {
-                            restartAsrListen()
-                        }
+                        // MiMo ASR records the whole long turn until stop().
                     }
                     st.phase == FullMockUiState.Phase.Listening -> onQaUserFinal(final.text)
                 }
@@ -412,25 +408,6 @@ class FullMockViewModel @Inject constructor(
         }
     }
 
-    private fun restartAsrListen() {
-        asrListenJob?.cancel()
-        asrListenJob = viewModelScope.launch {
-            runCatching { asrEngine.stop() }
-            delay(200)
-            if (finishingSpeak || _uiState.value.phase != FullMockUiState.Phase.P2Speaking) {
-                return@launch
-            }
-            runCatching {
-                _uiState.update { it.copy(asrListening = true) }
-                asrEngine.start(AsrSessionConfig(languageTag = "en-GB"))
-            }.onFailure { e ->
-                _uiState.update {
-                    it.copy(asrListening = false, error = NetworkUx.userMessage(e, "ASR 重启失败"))
-                }
-            }
-        }
-    }
-
     fun onNotesChanged(text: String) {
         _uiState.update { it.copy(notesDraft = text) }
     }
@@ -458,6 +435,12 @@ class FullMockViewModel @Inject constructor(
         if (finishingSpeak) return
         finishingSpeak = true
         speakTimerJob?.cancel()
+        runCatching { asrEngine.stop() }.onFailure { e ->
+            finishingSpeak = false
+            throw e
+        }
+        asrListenJob?.cancel()
+        delay(150)
         _uiState.update {
             it.copy(
                 phase = FullMockUiState.Phase.P2Saving,
@@ -465,9 +448,6 @@ class FullMockViewModel @Inject constructor(
                 asrListening = false,
             )
         }
-        runCatching { asrEngine.stop() }
-        asrListenJob?.cancel()
-        delay(150)
 
         val text = _uiState.value.finalTranscript
             .ifBlank { _uiState.value.partialTranscript }
@@ -610,7 +590,16 @@ class FullMockViewModel @Inject constructor(
 
     fun onMicReleased() {
         listenJob = viewModelScope.launch {
-            runCatching { asrEngine.stop() }
+            runCatching { asrEngine.stop() }.onFailure { e ->
+                _uiState.update {
+                    it.copy(
+                        phase = FullMockUiState.Phase.AwaitingAnswer,
+                        error = NetworkUx.userMessage(e, "ASR 失败"),
+                        statusMessage = "${it.stageLabelZh} · 识别失败",
+                    )
+                }
+                return@launch
+            }
             val current = _uiState.value
             val text = current.finalTranscript.ifBlank { current.partialTranscript }
             if (text.isNotBlank() && current.phase == FullMockUiState.Phase.Listening) {

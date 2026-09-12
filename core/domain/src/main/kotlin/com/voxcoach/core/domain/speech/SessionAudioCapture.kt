@@ -2,10 +2,11 @@ package com.voxcoach.core.domain.speech
 
 /**
  * Continuous local session recording (RP-01 minimal).
- * Writes m4a only; never uploads. Relative turn ranges use [elapsedMs].
+ * Writes wav locally; never uploaded to the sync server.
+ * Relative turn ranges use [elapsedMs].
  */
 interface SessionAudioCapture {
-    /** Start FGS + MediaRecorder. Returns absolute local audio path. */
+    /** Start FGS + mic capture. Returns absolute local audio path. */
     fun start(sessionId: String): String
 
     /** Milliseconds since [start], for Turn.startMs/endMs. */
@@ -18,4 +19,10 @@ interface SessionAudioCapture {
 
     /** Crash-safe release (idempotent). Call from ViewModel.onCleared. */
     fun release()
+
+    /** Current PCM byte cursor while recording, for cloud ASR utterance slices. */
+    fun pcmByteCursor(): Int? = null
+
+    /** WAV (PCM16LE mono) from [fromByte] to now. Null if not tapping this capture. */
+    fun pcmSliceToWav(fromByte: Int): ByteArray? = null
 }

@@ -9,8 +9,8 @@
 
 ## 2. 技术栈与版本基线
 - 端：Kotlin + Jetpack Compose + Material 3；**compileSdk/targetSdk 37（Android 17）、minSdk 26**；MVVM + Repository + Hilt + Room，模块分层 `feature:*` → `core:*` 单向依赖。
-- 语音：ASR/TTS 一律走抽象接口（`core:speech`），系统 SpeechRecognizer 优先，ML Kit / 云 ASR 降级；录音本地 m4a，**绝不上传服务器**。
-- LLM：OpenAI 兼容接口（`core:llm`），对话/单句判定/四维评测三档用法，SSE 流式；Key 存 Android Keystore，永不明文落盘。
+- 语音：ASR/TTS 一律走抽象接口（`core:speech`），默认 **MiMo-V2.5**（`mimo-v2.5-asr` / `mimo-v2.5-tts`），与对话共用设置中的 Base URL + API Key；会话录音本地 wav，**不同步到自有服务器**（识别片段会发往用户配置的 MiMo 端点）。
+- LLM：OpenAI 兼容接口（`core:llm`），对话默认 `mimo-v2.5`（设置页不手填模型），SSE 流式；Key 存 Android Keystore，永不明文落盘。
 - 服务端（可选/后期）：Go + SQLite，只做多设备**增量同步**与可选 **LLM Key 代理**，不跑大模型、不存音频。
 - 工具链版本须按 @docs/04-android-architecture.md §1.2 核对后冻结于 `libs.versions.toml`。
 
@@ -21,7 +21,7 @@
 
 ## 4. 文档读取纪律（渐进式，禁止整读）
 docs 文件较长且已冻结，**禁止一次性全文读取/注入**任何 docs 文档。一律：
-1. 先读本文件 + @docs/README.md（术语与决策速览，短）。
+1. 先读本文件 + 仓库根目录 `README.md`（含「团队约定：MiMo-V2.5」与术语表）。
 2. 按任务需要先定位文档与**目标小节**，再用 `read` 带 offset/limit 分段精读，或交给 code-explorer 子代理检索，需要哪节再 `@` 哪节。
 3. 分文档用途（建议 `@` 提及方式）：
    - 需求与 MVP 边界 → @docs/01-prd.md §3–4
@@ -34,7 +34,7 @@ docs 文件较长且已冻结，**禁止一次性全文读取/注入**任何 doc
 ## 5. 工程铁律
 1. **文档即真源**：实现若与 docs 冲突，须先修订 docs 或说明偏离理由，再继续编码。
 2. **不加戏**：不引入 docs 之外的框架/大依赖；新需求先改设计（修订 docs）再实现。
-3. **隐私默认**：录音与转写默认仅本地；云同步显式开启；一切 Key/.env 不入版本库。
+3. **隐私默认**：会话 wav 仅本地；识别/TTS 走用户配置的 MiMo；自有云同步显式开启且不存音频；一切 Key/.env 不入版本库。
 4. **抽象边界**：ASR / TTS / LLM / 存储 / 同步接口保持可替换、可注入 mock；禁止跨层直连（如 ViewModel 直接 new 引擎）。
 5. **数据一致性**：实体字段、API 字段、Room 表三处命名对齐（见 @docs/04 §6.1 与 @docs/05 §4）。
 6. 每次改动后自查 lint/编译错误；状态机与核心算法必须可单测。

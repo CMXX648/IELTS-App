@@ -6,12 +6,12 @@ import java.io.File
 
 class RecordingPathTest {
     @Test
-    fun sessionAudioFileUsesM4aUnderRecordingsDir() {
+    fun sessionAudioFileUsesWavUnderRecordingsDir() {
         val sessionId = "sess-abc"
         val dir = File("/tmp", MediaRecorderSessionAudioCapture.RECORDINGS_DIR)
-        val file = File(dir, "$sessionId.m4a")
-        assertThat(file.name).isEqualTo("sess-abc.m4a")
-        assertThat(file.extension).isEqualTo("m4a")
+        val file = File(dir, "$sessionId.wav")
+        assertThat(file.name).isEqualTo("sess-abc.wav")
+        assertThat(file.extension).isEqualTo("wav")
         assertThat(file.parentFile!!.name).isEqualTo("recordings")
     }
 }

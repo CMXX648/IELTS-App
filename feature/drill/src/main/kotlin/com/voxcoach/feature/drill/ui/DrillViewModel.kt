@@ -105,7 +105,16 @@ class DrillViewModel @Inject constructor(
 
     fun onMicReleased() {
         listenJob = viewModelScope.launch {
-            runCatching { asrEngine.stop() }
+            runCatching { asrEngine.stop() }.onFailure { e ->
+                _uiState.update {
+                    it.copy(
+                        phase = DrillUiState.Phase.Idle,
+                        error = NetworkUx.userMessage(e, "ASR 失败"),
+                        statusMessage = "识别失败",
+                    )
+                }
+                return@launch
+            }
             val current = _uiState.value
             val text = current.finalTranscript.ifBlank { current.partialTranscript }
             if (text.isNotBlank() && current.phase == DrillUiState.Phase.Listening) {

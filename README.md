@@ -19,12 +19,79 @@
 - 模块：`app` / `core:{domain,speech,llm,data,designsystem}` / `feature:{conversation,drill}`。
 - 本地构建：`source /home/box/android-env.sh`（或自备 SDK）后执行 `./gradlew :app:assembleDebug`。
 - **切勿提交** `local.properties`、API Key、keystore 或录音文件。
-- **密钥安全（ST-01）**：LLM `apiKey` 仅经 **Android Keystore AES/GCM** 封装后落盘（ciphertext 在私有 SharedPreferences）；`baseUrl` / `model` 可明文存 DataStore。不使用已停维护的 `security-crypto` EncryptedSharedPreferences。升级后若设备上仍有旧版 DataStore 明文 `api_key`，会一次性迁入 Keystore 并清除明文。
+- **密钥安全（ST-01）**：`apiKey` 仅经 **Android Keystore AES/GCM** 封装后落盘；`baseUrl` 明文存 DataStore。对话 / ASR / TTS 共用该密钥。模型内置为 MiMo-V2.5（`mimo-v2.5` / `mimo-v2.5-asr` / `mimo-v2.5-tts`），设置页无需填写。
+
+### 团队约定：MiMo-V2.5 语音与对话（必读）
+
+> 相对 M0 冻结稿的实现偏离。**编码与评审以本节 + `docs/04` 为准**；`mimo.md` 只是厂商接口摘录，不是产品规格。
+
+#### 设置（ST-01）
+
+| 项 | 约定 |
+|---|---|
+| 用户填写 | **仅** Base URL + API Key |
+| 不要做 | 不要再加 Model 输入框；不要把 Key 写入仓库 / logcat |
+| 默认 Base URL | `https://api.xiaomimimo.com/v1` |
+| Key 存储 | Android Keystore AES/GCM；`baseUrl` 明文 DataStore |
+| 认证头 | 同时发 `Authorization: Bearer <key>` 与 `api-key: <key>`（兼容 MiMo 与 OpenAI SDK） |
+
+对话、ASR、TTS **共用**上述 URL 与 Key。
+
+#### 内置模型（禁止在业务代码里再散落一份）
+
+常量入口：`core/domain/.../MimoDefaults.kt`。
+
+| 用途 | Model ID | 说明 |
+|---|---|---|
+| 对话 / GR 判定 / EV 评测 | `mimo-v2.5` | OpenAI 兼容 `/v1/chat/completions` SSE |
+| ASR | `mimo-v2.5-asr` | 松手后上传 WAV（Data URL + `asr_options.language=en`） |
+| TTS | `mimo-v2.5-tts` | `audio.format=pcm16`，音色 `Chloe`（英音），24 kHz 流式播放 |
+
+#### 运行时链路（当前已实现）
+
+```
+按住说话 → 本地 16 kHz PCM
+  → 松开：切出本段 WAV → POST MiMo ASR → 转写上屏
+  → LLM 流式（mimo-v2.5）→ TTS 流式（Chloe）→ AudioTrack 播放
+会话全程另写本地 files/recordings/<sessionId>.wav（与 ASR 共用同一路 mic，避免双开）
+```
+
+- 自由对话 / Part1 / Part3 / GR：按住说话，**松手后才识别**（说话过程中没有系统引擎那种词级 partial）。
+- Part2 长独白：开口开始录，点「说完了」或满 120s 后 **整段一次** ASR，不要按静音分段重启识别。
+
+#### 隐私边界（两套「云」不要混）
+
+| 数据 | 去向 |
+|---|---|
+| 会话录音 wav、Room 会话/轮次 | **仅本机**；自有 2C2G 同步服务器 **不存音频**（见 `docs/05`） |
+| 按住说话的识别片段 / TTS 合成文本 | 发往用户配置的 **MiMo 端点**（厂商云，不是自有服务器） |
+| API Key | 本机 Keystore，不明文落盘 |
+
+断网时：本地录音与已保存轮次可保留；**对话 / 识别 / 播报都需要网络**。
+
+#### 代码入口（改语音/模型先看这里）
+
+| 职责 | 位置 |
+|---|---|
+| 模型与默认 URL | `MimoDefaults` |
+| ASR | `core/speech/.../MimoAsrEngine.kt`（Hilt 绑定） |
+| TTS | `core/speech/.../MimoTtsEngine.kt` |
+| 对话 LLM | `core/llm/.../OpenAiCompatibleLlmClient.kt` |
+| 设置读写 | `DataStoreLlmSettingsRepository` + `SettingsScreen` |
+| 会话 wav | `MediaRecorderSessionAudioCapture`（实现已改为 AudioRecord PCM，类名未改以免大面积重命名） |
+
+`SystemAsrEngine` / `SystemTtsEngine` 仍留在仓库，**未绑定**，不要误以为线上还走系统引擎。
+
+#### 规格债（写在 01/03 里、当前未实现，勿当成已完成）
+
+- CV-03「边说边显字」词级 partial：MiMo 路径是松手后出结果。
+- 点击切换聆听 + VAD 自动说完：未做。
+- ST-02 引擎选择 / 系统 ASR·ML Kit 降级链：未做。
 
 ### 当前可真机验证的 MVP 范围
 
 - [x] 首次引导 + 麦克风权限门闸（onboarding / mic gate）
-- [x] 设置 LLM（Base URL / Model / Keystore 加密 Key）
+- [x] 设置 MiMo（Base URL / Keystore 加密 Key；模型内置）
 - [x] 自由对话 CV（按住说话 → ASR → LLM 流式 → TTS）+ 结束会话 EV 报告
 - [x] Part 1 / Part 2 / Part 3 模拟口试 + 完整模考（结束后统一 EV）
 - [x] 语法句式 GR（列表 → 产出判定 → 可收藏错题）
@@ -61,12 +128,12 @@ source /home/box/android-env.sh   # 或自备 SDK
 
 | # | 文档 | 内容 | 状态 |
 |---|------|------|------|
-| 1 | [`docs/01-prd.md`](docs/01-prd.md) | 产品需求文档：目标、场景、功能清单（含优先级）、MVP 边界、非功能需求 | ✅ 完成 |
-| 2 | [`docs/02-learning-path.md`](docs/02-learning-path.md) | 雅思 7.5 学习路径设计：能力模型、话题体系、分阶段路径、练习法理据 | ✅ 完成 |
-| 3 | [`docs/03-feature-spec.md`](docs/03-feature-spec.md) | 功能规格：实时对话、语法句式、录音回放、四维反馈、错题本的交互与状态流 | ✅ 完成 |
-| 4 | [`docs/04-android-architecture.md`](docs/04-android-architecture.md) | Android 技术架构：模块划分、ASR/TTS/LLM 抽象层、本地存储、Android 17 适配 | ✅ 完成 |
-| 5 | [`docs/05-backend-api.md`](docs/05-backend-api.md) | 后端与 API 契约：2C2G 选型、REST 契约、ER 模型、鉴权、同步策略 | ✅ 完成 |
-| 6 | [`docs/06-roadmap-acceptance.md`](docs/06-roadmap-acceptance.md) | 里程碑路线图、验收标准、风险清单、评审结论 | ✅ 完成 |
+| 1 | [`docs/01-prd.md`](docs/01-prd.md) | 产品需求文档：目标、场景、功能清单（含优先级）、MVP 边界、非功能需求 | ✅ v0.9.1（MiMo） |
+| 2 | [`docs/02-learning-path.md`](docs/02-learning-path.md) | 雅思 7.5 学习路径设计：能力模型、话题体系、分阶段路径、练习法理据 | ✅ v0.9 |
+| 3 | [`docs/03-feature-spec.md`](docs/03-feature-spec.md) | 功能规格：实时对话、语法句式、录音回放、四维反馈、错题本的交互与状态流 | ✅ v0.9.1（MiMo） |
+| 4 | [`docs/04-android-architecture.md`](docs/04-android-architecture.md) | Android 技术架构：模块划分、ASR/TTS/LLM 抽象层、本地存储、Android 17 适配 | ✅ v0.9.1（MiMo） |
+| 5 | [`docs/05-backend-api.md`](docs/05-backend-api.md) | 后端与 API 契约：2C2G 选型、REST 契约、ER 模型、鉴权、同步策略 | ✅ v0.9.1（音频边界澄清） |
+| 6 | [`docs/06-roadmap-acceptance.md`](docs/06-roadmap-acceptance.md) | 里程碑路线图、验收标准、风险清单、评审结论 | ✅ v0.9.1（MiMo） |
 
 > 推荐阅读顺序：`README` → `01` → `02` → `03` → `04` → `05` → `06`。
 
@@ -102,9 +169,10 @@ source /home/box/android-env.sh   # 或自备 SDK
 |---|---|---|
 | 编译/目标 SDK | compileSdk 37（Android 17）/ targetSdk 37，minSdk 26 | 04 |
 | UI 技术栈 | Kotlin + Jetpack Compose + Material 3 | 04 |
-| LLM 接入 | OpenAI 兼容接口，直连为主 + 服务器代理为可选 | 04/05 |
-| ASR 方案 | 抽象层多后端：系统 SpeechRecognizer 优先、ML Kit/云端降级 | 04 |
-| 录音存储 | 本地优先，服务器仅存元数据 | 05 |
+| LLM 接入 | OpenAI 兼容接口（默认 MiMo `mimo-v2.5`），直连为主 + 服务器代理为可选 | 04/05 |
+| ASR / TTS | 默认 MiMo-V2.5 云端（`mimo-v2.5-asr` / `mimo-v2.5-tts`），接口可替换 | 04 |
+| 录音存储 | 会话 wav 仅本地；识别片段发 MiMo；2C2G 不存音频 | 04/05 |
+| ST-01 | 只填 Base URL + API Key；三个模型 ID 写死在 `MimoDefaults` | 04 §5.1 |
 | 后端选型 | Go + SQLite（适配 2C2G） | 05 |
 | 同步策略 | 时间戳 + 变更日志（oplog）增量同步 | 05 |
 
@@ -116,9 +184,9 @@ source /home/box/android-env.sh   # 或自备 SDK
 flowchart LR
     U[用户] -->|语音输入| A[Android App VoxCoach<br/>Kotlin + Jetpack Compose]
     A -->|播放语音/文本| U
-    A -->|① OpenAI 兼容协议<br/>streaming| C[云端 LLM<br/>DeepSeek / OpenAI / 混元 等]
+    A -->|① OpenAI 兼容 /v1/chat/completions<br/>对话 mimo-v2.5 · ASR · TTS| C[MiMo 云<br/>用户配置的 Base URL]
     A -->|② REST + 增量同步| B[自有服务器 2C2G<br/>会话记录 · 学习档案 · 可选 Key 代理]
-    A <--> D[端侧 ASR / TTS 引擎]
+    A --> D[本机 16kHz PCM / wav<br/>会话录音不上传 2C2G]
     B -.未来.-> W[Web 端统计]
 ```
 

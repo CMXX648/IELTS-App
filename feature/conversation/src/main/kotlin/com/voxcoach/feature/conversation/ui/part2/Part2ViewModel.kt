@@ -45,13 +45,9 @@ import com.voxcoach.core.domain.ux.NetworkUx
  * IELTS Part 2 mock (CV-02 P2 slice): examiner intro TTS → cue card → 60s prep →
  * up to 120s long turn → auto EV report.
  *
- * **ASR choice (documented):** continuous session m4a recording
- * ([SessionAudioCapture]) for the whole mock; during the long turn we run
- * **continuous listen** on [AsrEngine] (start at speak phase, stop on 「说完了」
- * or 120s timeout), accumulating intermediate finals if the system recognizer
- * segments on silence and restarting listen until the turn ends.
- * Press-to-talk is not used for the monologue (poor UX for 1–2 min; docs prefer
- * 「说完了」). Offline file ASR after recording is out of scope (no file-ASR API).
+ * **ASR choice:** session wav capture + MiMo-V2.5 ASR for the long turn
+ * (start at speak phase, stop on 「说完了」 or 120s timeout). Press-to-talk is
+ * not used for the monologue.
  */
 @HiltViewModel
 class Part2ViewModel @Inject constructor(
@@ -114,11 +110,7 @@ class Part2ViewModel @Inject constructor(
                         finalTranscript = joined,
                     )
                 }
-                // System SpeechRecognizer often ends after a pause; keep listening
-                // until user finishes or the speak timer expires.
-                if (!finishingSpeak && _uiState.value.phase == Part2UiState.Phase.Speaking) {
-                    restartAsrListen()
-                }
+                // MiMo ASR records the whole long turn until stop(); do not restart.
             }
         }
     }
@@ -347,26 +339,6 @@ class Part2ViewModel @Inject constructor(
         }
     }
 
-    private fun restartAsrListen() {
-        asrListenJob?.cancel()
-        asrListenJob = viewModelScope.launch {
-            runCatching { asrEngine.stop() }
-            delay(200)
-            if (finishingSpeak || _uiState.value.phase != Part2UiState.Phase.Speaking) return@launch
-            runCatching {
-                _uiState.update { it.copy(asrListening = true) }
-                asrEngine.start(AsrSessionConfig(languageTag = "en-GB"))
-            }.onFailure { e ->
-                _uiState.update {
-                    it.copy(
-                        asrListening = false,
-                        error = NetworkUx.userMessage(e, "ASR 重启失败"),
-                    )
-                }
-            }
-        }
-    }
-
     fun onNotesChanged(text: String) {
         _uiState.update { it.copy(notesDraft = text) }
     }
@@ -394,6 +366,12 @@ class Part2ViewModel @Inject constructor(
         if (finishingSpeak) return
         finishingSpeak = true
         speakTimerJob?.cancel()
+        runCatching { asrEngine.stop() }.onFailure { e ->
+            finishingSpeak = false
+            throw e
+        }
+        asrListenJob?.cancel()
+        delay(150)
         _uiState.update {
             it.copy(
                 phase = Part2UiState.Phase.Saving,
@@ -401,9 +379,6 @@ class Part2ViewModel @Inject constructor(
                 asrListening = false,
             )
         }
-        runCatching { asrEngine.stop() }
-        asrListenJob?.cancel()
-        delay(150)
 
         val text = _uiState.value.finalTranscript
             .ifBlank { _uiState.value.partialTranscript }

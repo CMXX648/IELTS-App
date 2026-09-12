@@ -72,7 +72,7 @@ fun OnboardingScreen(
                 Text(
                     "这是一款个人口语练习 App：用麦克风与 AI 考官对话，" +
                         "本地录音复盘，并获得雅思四维评分反馈。\n\n" +
-                        "录音仅保存在本机，默认不会上传。",
+                        "会话录音保存在本机；按住说话的识别片段会发往你配置的 MiMo ASR。",
                     style = MaterialTheme.typography.bodyLarge,
                 )
                 Spacer(Modifier.height(8.dp))
@@ -82,12 +82,12 @@ fun OnboardingScreen(
             }
             1 -> {
                 Text(
-                    "请先配置你的 LLM（OpenAI 兼容接口：baseUrl / model / API Key）。\n" +
-                        "没有 Key 时仍可用内置 Mock 跑通流程。",
+                    "请先配置 MiMo（OpenAI 兼容接口：Base URL / API Key）。\n" +
+                        "对话、ASR、TTS 共用该密钥；模型已内置为 mimo-v2.5 系列，无需手填。",
                     style = MaterialTheme.typography.bodyLarge,
                 )
                 Button(onClick = onOpenSettings, modifier = Modifier.fillMaxWidth()) {
-                    Text("去设置配置 LLM")
+                    Text("去设置配置 MiMo")
                 }
                 OutlinedButton(onClick = { step = 2 }, modifier = Modifier.fillMaxWidth()) {
                     Text("稍后再说，继续")
@@ -101,7 +101,7 @@ fun OnboardingScreen(
                         } else {
                             ""
                         } +
-                        "\n\n录音仅用于练习与分析，可离线使用，不默认上传。",
+                        "\n\n会话录音仅用于练习与分析，保存在本机；识别走你配置的 MiMo ASR。",
                     style = MaterialTheme.typography.bodyLarge,
                 )
                 Button(
