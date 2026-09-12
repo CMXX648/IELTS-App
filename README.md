@@ -102,12 +102,21 @@
 - [ ] 端云同步 / Key 代理（后期）
 - [ ] 错题重练转 GR、语料收藏、Barge-in（P1+）
 
+### 当前首页 UI（学习地图）
+
+> 相对 `docs/03` §2.1「今日任务卡」首页的实现偏离。**编码以 Figma `ielts-home` + `core:designsystem` 为准。**
+
+- 底栏 3 Tab：**学习地图** / **练习大厅** / **个人中心**（稿面 4 Tab 未落地）。
+- 首页为垂直闯关岛：发音热身（完成）→ 话题素材（当前）→ 逻辑表达（锁定）→ 全真模考（终极挑战）。
+- 令牌：Primary `#FF5A5F`，Success `#4CB974`，Background `#FAF6F2`（见 `Color.kt`）。
+- 组件：`IslandNode`、`StreakPill`、`IslandPathConnector`；图标在 `core/designsystem/src/main/res/drawable/`。
+
 ### 延迟冒烟（LatencySmoke）
 
 M1 验收用固定 3 句英文走 MockAsr → MockLlm → MockTts，统计 ASR终稿→LLM首字→TTS起播：
 
 1. **单元测试**：`./gradlew :core:domain:test`（含 `LatencySmokeTest` / `EvJsonParserTest`）
-2. **应用内**：长按首页标题「VoxCoach 首页」进入调试页，点「运行 LatencySmoke」；报告写入 `files/smoke/latency-smoke-*.md`，并打 logcat tag `LatencySmoke`
+2. **应用内**：长按首页问候区（`SPEAKING MASTER` / `Hello, Alex`）进入调试页，点「运行 LatencySmoke」；报告写入 `files/smoke/latency-smoke-*.md`，并打 logcat tag `LatencySmoke`
 
 ### EV 标定回归（M2）
 
@@ -130,8 +139,8 @@ source /home/box/android-env.sh   # 或自备 SDK
 |---|------|------|------|
 | 1 | [`docs/01-prd.md`](docs/01-prd.md) | 产品需求文档：目标、场景、功能清单（含优先级）、MVP 边界、非功能需求 | ✅ v0.9.1（MiMo） |
 | 2 | [`docs/02-learning-path.md`](docs/02-learning-path.md) | 雅思 7.5 学习路径设计：能力模型、话题体系、分阶段路径、练习法理据 | ✅ v0.9 |
-| 3 | [`docs/03-feature-spec.md`](docs/03-feature-spec.md) | 功能规格：实时对话、语法句式、录音回放、四维反馈、错题本的交互与状态流 | ✅ v0.9.1（MiMo） |
-| 4 | [`docs/04-android-architecture.md`](docs/04-android-architecture.md) | Android 技术架构：模块划分、ASR/TTS/LLM 抽象层、本地存储、Android 17 适配 | ✅ v0.9.1（MiMo） |
+| 3 | [`docs/03-feature-spec.md`](docs/03-feature-spec.md) | 功能规格：实时对话、语法句式、录音回放、四维反馈、错题本的交互与状态流 | ✅ v0.9.2（闯关岛首页 + MiMo） |
+| 4 | [`docs/04-android-architecture.md`](docs/04-android-architecture.md) | Android 技术架构：模块划分、ASR/TTS/LLM 抽象层、本地存储、Android 17 适配 | ✅ v0.9.2（闯关岛令牌 + MiMo） |
 | 5 | [`docs/05-backend-api.md`](docs/05-backend-api.md) | 后端与 API 契约：2C2G 选型、REST 契约、ER 模型、鉴权、同步策略 | ✅ v0.9.1（音频边界澄清） |
 | 6 | [`docs/06-roadmap-acceptance.md`](docs/06-roadmap-acceptance.md) | 里程碑路线图、验收标准、风险清单、评审结论 | ✅ v0.9.1（MiMo） |
 
