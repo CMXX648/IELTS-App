@@ -9,6 +9,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import com.voxcoach.core.designsystem.component.IslandConnectorTone
 import com.voxcoach.core.designsystem.component.IslandState
 import com.voxcoach.core.designsystem.component.IslandNode
 import com.voxcoach.core.designsystem.component.StreakPill
@@ -24,9 +25,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -39,15 +37,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
-import com.voxcoach.core.designsystem.theme.VoxAccent
+import com.voxcoach.core.designsystem.theme.VoxMuted
+import com.voxcoach.core.designsystem.theme.VoxOnBackground
 import com.voxcoach.core.domain.model.Topic
 import com.voxcoach.core.domain.repository.TopicRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -63,8 +63,6 @@ class HomeViewModel @Inject constructor(
     val topics: StateFlow<List<Topic>> = topicRepository.observeTopics()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 }
-
-private val CardShape = RoundedCornerShape(16.dp)
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -242,46 +240,97 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .combinedClickable(onClick = {}, onLongClick = onOpenDebug),
+                    .combinedClickable(onClick = {}, onLongClick = onOpenDebug)
+                    .padding(start = 24.dp, end = 24.dp, top = 16.dp, bottom = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("Hi, Alex", style = MaterialTheme.typography.titleLarge)
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        "SPEAKING MASTER",
+                        color = VoxMuted,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 13.sp,
+                        lineHeight = 16.sp,
+                    )
+                    Text(
+                        "Hello, Alex \uD83D\uDC4B",
+                        color = VoxOnBackground,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 22.sp,
+                        lineHeight = 27.sp,
+                    )
+                }
                 StreakPill(days = streakDays)
             }
-            Spacer(Modifier.height(24.dp))
 
-            IslandNode(
-                title = "热身",
-                state = IslandState.Done,
-                onClick = { tryStart(hometownId) },
-            )
-            IslandPathConnector(zigLeft = false)
-            IslandNode(
-                title = "Part 1",
-                subtitle = "",
-                state = IslandState.Current,
-                onClick = { tryStartPart1() },
-            )
-            IslandPathConnector(zigLeft = true)
-            IslandNode(
-                title = "语法",
-                state = IslandState.Locked,
-                onClick = onOpenGrammar,
-            )
-            IslandPathConnector(zigLeft = false)
-            IslandNode(
-                title = "更远",
-                state = IslandState.Distant,
-                onClick = { tryStartPart2() },
-            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp, bottom = 24.dp),
+            ) {
+                IslandNode(
+                    title = "🎙 发音热身岛",
+                    state = IslandState.Done,
+                    progress = 1f,
+                    onClick = { tryStart(hometownId) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 40.dp),
+                )
+                IslandPathConnector(tone = IslandConnectorTone.Success)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 40.dp),
+                    horizontalAlignment = Alignment.End,
+                ) {
+                    IslandNode(
+                        title = "\uD83D\uDCAC 话题素材岛",
+                        subtitle = "点击开始练习 \u2192",
+                        state = IslandState.Current,
+                        progress = 0.45f,
+                        cardWidth = 220.dp,
+                        onClick = { tryStartPart1() },
+                    )
+                }
+                IslandPathConnector(tone = IslandConnectorTone.Muted)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 40.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    IslandNode(
+                        title = "\uD83E\uDDE0 逻辑表达岛",
+                        subtitle = "完成第2岛后解锁",
+                        state = IslandState.Locked,
+                        cardWidth = 200.dp,
+                        onClick = onOpenGrammar,
+                    )
+                }
+                IslandPathConnector(tone = IslandConnectorTone.Muted)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 40.dp),
+                    horizontalAlignment = Alignment.End,
+                ) {
+                    IslandNode(
+                        title = "\uD83D\uDCDD 全真模考岛",
+                        subtitle = "解锁全部岛屿后开启",
+                        state = IslandState.Distant,
+                        cardWidth = 200.dp,
+                        onClick = { tryStartFullMock() },
+                    )
+                }
+            }
 
             if (!hasMic()) {
                 Spacer(Modifier.height(16.dp))

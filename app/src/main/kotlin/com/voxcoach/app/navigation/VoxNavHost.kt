@@ -1,21 +1,22 @@
 package com.voxcoach.app.navigation
 
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.graphics.vector.ImageVector
+import com.voxcoach.core.designsystem.theme.VoxMuted
+import com.voxcoach.core.designsystem.theme.VoxPrimary
+import com.voxcoach.core.designsystem.theme.VoxSurface
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -72,7 +73,7 @@ object Routes {
     fun vaultDetail(mistakeId: String) = "vault/$mistakeId"
 }
 
-private data class Tab(val route: String, val label: String, val icon: ImageVector)
+private data class Tab(val route: String, val label: String, val iconRes: Int)
 
 @HiltViewModel
 class RootNavViewModel @Inject constructor(
@@ -95,9 +96,9 @@ fun VoxNavHost(
     val navController = rememberNavController()
     val start = if (onboardingDone == true) Routes.Home else Routes.Onboarding
     val tabs = listOf(
-        Tab(Routes.Home, "首页", Icons.Default.Home),
-        Tab(Routes.DrillList, "练习", Icons.Default.Star),
-        Tab(Routes.Profile, "我的", Icons.Default.Person),
+        Tab(Routes.Home, "学习地图", com.voxcoach.core.designsystem.R.drawable.ic_nav_house),
+        Tab(Routes.DrillList, "练习大厅", com.voxcoach.core.designsystem.R.drawable.ic_nav_book),
+        Tab(Routes.Profile, "个人中心", com.voxcoach.core.designsystem.R.drawable.ic_nav_user),
     )
     val backStack by navController.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
@@ -107,9 +108,16 @@ fun VoxNavHost(
         bottomBar = {
             if (showBottomBar) {
                 NavigationBar(
-                    containerColor = androidx.compose.ui.graphics.Color.White,
+                    containerColor = VoxSurface,
                     tonalElevation = 0.dp,
                 ) {
+                    val itemColors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = VoxPrimary,
+                        selectedTextColor = VoxPrimary,
+                        unselectedIconColor = VoxMuted,
+                        unselectedTextColor = VoxMuted,
+                        indicatorColor = Color.Transparent,
+                    )
                     tabs.forEach { tab ->
                         NavigationBarItem(
                             selected = currentRoute == tab.route,
@@ -122,8 +130,15 @@ fun VoxNavHost(
                                     restoreState = true
                                 }
                             },
-                            icon = { Icon(tab.icon, contentDescription = tab.label) },
+                            icon = {
+                                Icon(
+                                    painter = painterResource(tab.iconRes),
+                                    contentDescription = tab.label,
+                                    modifier = Modifier.size(22.dp),
+                                )
+                            },
                             label = { Text(tab.label) },
+                            colors = itemColors,
                         )
                     }
                 }
