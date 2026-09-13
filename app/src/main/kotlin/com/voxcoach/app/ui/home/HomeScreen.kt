@@ -275,15 +275,21 @@ fun HomeScreen(
                     .fillMaxWidth()
                     .padding(top = 16.dp, bottom = 24.dp),
             ) {
-                IslandNode(
-                    title = "🎙 发音热身岛",
-                    state = IslandState.Done,
-                    progress = 1f,
-                    onClick = { tryStart(hometownId) },
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 40.dp),
-                )
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    IslandNode(
+                        title = "🎙 发音热身岛",
+                        subtitle = "已完成",
+                        state = IslandState.Done,
+                        progress = 1f,
+                        cardWidth = 200.dp,
+                        onClick = { tryStart(hometownId) },
+                    )
+                }
                 IslandPathConnector(tone = IslandConnectorTone.Success)
                 Column(
                     modifier = Modifier
@@ -292,11 +298,11 @@ fun HomeScreen(
                     horizontalAlignment = Alignment.End,
                 ) {
                     IslandNode(
-                        title = "\uD83D\uDCAC 话题素材岛",
-                        subtitle = "点击开始练习 \u2192",
+                        title = "💬 话题素材岛",
+                        subtitle = "点击开始练习 →",
                         state = IslandState.Current,
                         progress = 0.45f,
-                        cardWidth = 220.dp,
+                        cardWidth = 200.dp,
                         onClick = { tryStartPart1() },
                     )
                 }
@@ -308,9 +314,10 @@ fun HomeScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     IslandNode(
-                        title = "\uD83E\uDDE0 逻辑表达岛",
+                        title = "🧠 逻辑表达岛",
                         subtitle = "完成第2岛后解锁",
                         state = IslandState.Locked,
+                        progress = 0f,
                         cardWidth = 200.dp,
                         onClick = onOpenGrammar,
                     )
@@ -323,9 +330,10 @@ fun HomeScreen(
                     horizontalAlignment = Alignment.End,
                 ) {
                     IslandNode(
-                        title = "\uD83D\uDCDD 全真模考岛",
+                        title = "📝 全真模考岛",
                         subtitle = "解锁全部岛屿后开启",
                         state = IslandState.Distant,
+                        progress = 0f,
                         cardWidth = 200.dp,
                         onClick = { tryStartFullMock() },
                     )

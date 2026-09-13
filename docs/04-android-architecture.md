@@ -2,7 +2,7 @@
 
 | 项目 | 内容 |
 |---|---|
-| 文档版本 | v0.9.2（designsystem 对齐 Figma 闯关岛令牌；默认引擎 MiMo-V2.5） |
+| 文档版本 | v0.9.3（闯关岛插画标 + 环形进度；默认引擎 MiMo-V2.5） |
 | 关联 | 03 功能规格（页面与状态机在此落地）、05 后端契约（同步与评测代理）、README 术语表 |
 | 工程基线 | Kotlin + Jetpack Compose + Material 3；compileSdk 37 / targetSdk 37 / minSdk 26 |
 
@@ -75,7 +75,7 @@ flowchart BT
 - **单向数据流**：Compose → ViewModel(UiState/Event) → UseCase → 抽象接口。
 - **可替换点**（面向接口，测试注入 mock）：`AsrEngine`、`TtsEngine`、`LlmClient`、`RecordRepository`、`SyncGateway`。
 - 依赖注入：Hilt；导航：Compose Navigation（类型安全路由 + `kotlinx.serialization`）。
-- **`core:designsystem`（Figma `ielts-home`）**：Primary `#FF5A5F`、Success `#4CB974`、Background `#FAF6F2`；闯关岛组件 `IslandNode` / `StreakPill` / `IslandPathConnector`；底栏 3 Tab 见 `VoxNavHost`。
+- **`core:designsystem`（Figma `ielts-home`）**：Primary `#FF5A5F`、Success `#4CB974`、Background `#FAF6F2`；闯关岛 `IslandNode`（插画圆标 + 32dp 环形进度）/ `StreakPill` / `IslandPathConnector`；底栏 3 Tab 见 `VoxNavHost`。
 - 并发：Kotlin Coroutines + Flow；所有引擎回调经 `callbackFlow` 收敛为 Flow。
 
 ### 2.2 关键抽象（接口骨架，正式代码 M1 建）

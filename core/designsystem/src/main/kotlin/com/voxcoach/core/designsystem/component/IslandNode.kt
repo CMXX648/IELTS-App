@@ -2,6 +2,7 @@ package com.voxcoach.core.designsystem.component
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -11,9 +12,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -26,9 +27,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -286,148 +290,326 @@ private fun IslandBadge(state: IslandState) {
 @Composable
 private fun IslandGraphic(state: IslandState) {
     when (state) {
-        IslandState.Done -> {
+        IslandState.Done -> DoneIslandMark()
+        IslandState.Current -> CurrentIslandMark()
+        IslandState.Locked -> LockedIslandMark()
+        IslandState.Distant -> DistantIslandMark()
+    }
+}
+
+@Composable
+private fun DoneIslandMark() {
+    Box(
+        modifier = Modifier
+            .padding(top = 8.dp)
+            .shadow(
+                elevation = 8.dp,
+                shape = CircleShape,
+                ambientColor = VoxSuccess.copy(alpha = 0.19f),
+                spotColor = VoxSuccess.copy(alpha = 0.19f),
+            )
+            .size(92.dp)
+            .border(2.dp, VoxSuccess, CircleShape)
+            .background(VoxSurface, CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(72.dp)
+                .background(
+                    Brush.radialGradient(listOf(Color(0xFFC8F4D8), VoxSuccessSoft)),
+                    CircleShape,
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
             Box(
-                modifier = Modifier
-                    .padding(top = 8.dp)
-                    .shadow(
-                        elevation = 8.dp,
-                        shape = CircleShape,
-                        ambientColor = VoxSuccess.copy(alpha = 0.19f),
-                        spotColor = VoxSuccess.copy(alpha = 0.19f),
-                    )
-                    .size(92.dp)
-                    .border(2.dp, VoxSuccess, CircleShape)
-                    .background(VoxSurface, CircleShape),
-                contentAlignment = Alignment.Center,
-            ) {
+                Modifier
+                    .size(56.dp)
+                    .border(1.5.dp, VoxSuccess.copy(alpha = 0.35f), CircleShape),
+            )
+            Box(
+                Modifier
+                    .size(40.dp)
+                    .border(1.5.dp, VoxSuccess.copy(alpha = 0.25f), CircleShape),
+            )
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(
                     modifier = Modifier
-                        .size(72.dp)
-                        .background(VoxSuccessSoft, CircleShape),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    SoundWaves()
-                }
-            }
-        }
-        IslandState.Current -> {
-            Box(
-                modifier = Modifier
-                    .shadow(
-                        elevation = 10.dp,
-                        shape = CircleShape,
-                        ambientColor = VoxPrimary.copy(alpha = 0.23f),
-                        spotColor = VoxPrimary.copy(alpha = 0.23f),
-                    )
-                    .size(108.dp)
-                    .background(VoxCoralGlow, CircleShape),
-                contentAlignment = Alignment.Center,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(96.dp)
-                        .border(3.dp, VoxPrimary, CircleShape)
-                        .background(VoxCoralSoft, CircleShape),
+                        .size(width = 18.dp, height = 22.dp)
+                        .background(VoxSuccess, RoundedCornerShape(9.dp)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Box(
-                        modifier = Modifier
-                            .shadow(
-                                elevation = 4.dp,
-                                shape = CircleShape,
-                                ambientColor = VoxPrimary.copy(alpha = 0.33f),
-                                spotColor = VoxPrimary.copy(alpha = 0.33f),
-                            )
-                            .size(76.dp)
-                            .background(VoxPrimary, CircleShape),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_island_mic),
-                            contentDescription = null,
-                            tint = Color.Unspecified,
-                            modifier = Modifier.size(26.dp),
-                        )
-                    }
+                        Modifier
+                            .size(width = 6.dp, height = 10.dp)
+                            .background(Color(0xFF2A8F52), RoundedCornerShape(3.dp)),
+                    )
                 }
+                SpacerDot(2.dp)
+                Box(
+                    Modifier
+                        .size(width = 2.dp, height = 4.dp)
+                        .background(VoxSuccess, RoundedCornerShape(1.dp)),
+                )
+                Box(
+                    Modifier
+                        .size(width = 12.dp, height = 2.dp)
+                        .background(VoxSuccess, RoundedCornerShape(1.dp)),
+                )
             }
-        }
-        IslandState.Locked -> {
+            Box(
+                Modifier
+                    .align(Alignment.CenterStart)
+                    .offset(x = 6.dp)
+                    .size(10.dp)
+                    .background(VoxSuccess.copy(alpha = 0.35f), CircleShape),
+            )
+            Box(
+                Modifier
+                    .align(Alignment.CenterEnd)
+                    .offset(x = (-6).dp)
+                    .size(10.dp)
+                    .background(VoxSuccess.copy(alpha = 0.35f), CircleShape),
+            )
             Box(
                 modifier = Modifier
-                    .graphicsLayer { alpha = 0.85f }
-                    .shadow(
-                        elevation = 4.dp,
-                        shape = CircleShape,
-                        ambientColor = VoxOnBackground.copy(alpha = 0.03f),
-                        spotColor = VoxOnBackground.copy(alpha = 0.03f),
-                    )
-                    .size(84.dp)
-                    .border(1.5.dp, VoxLockedBorder, CircleShape)
-                    .background(VoxLocked, CircleShape),
+                    .align(Alignment.TopEnd)
+                    .offset(x = (-8).dp, y = 8.dp)
+                    .size(18.dp)
+                    .background(VoxSuccess, CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(68.dp)
-                        .background(VoxLockedInner, CircleShape),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_island_lock),
-                        contentDescription = null,
-                        tint = Color.Unspecified,
-                        modifier = Modifier.size(22.dp),
-                    )
-                }
-            }
-        }
-        IslandState.Distant -> {
-            Box(
-                modifier = Modifier
-                    .graphicsLayer { alpha = 0.75f }
-                    .shadow(
-                        elevation = 4.dp,
-                        shape = CircleShape,
-                        ambientColor = VoxGoldBorder.copy(alpha = 0.13f),
-                        spotColor = VoxGoldBorder.copy(alpha = 0.13f),
-                    )
-                    .size(84.dp)
-                    .border(1.5.dp, VoxGoldBorder, CircleShape)
-                    .background(VoxGoldSoft, CircleShape),
-                contentAlignment = Alignment.Center,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(68.dp)
-                        .background(VoxGoldInner, CircleShape),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_island_lock_gold),
-                        contentDescription = null,
-                        tint = Color.Unspecified,
-                        modifier = Modifier.size(22.dp),
-                    )
-                }
+                Icon(
+                    painter = painterResource(R.drawable.ic_island_check_on),
+                    contentDescription = null,
+                    tint = Color.Unspecified,
+                    modifier = Modifier.size(10.dp),
+                )
             }
         }
     }
 }
 
 @Composable
-private fun SoundWaves() {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(3.dp),
-        verticalAlignment = Alignment.CenterVertically,
+private fun SpacerDot(h: Dp) {
+    Box(Modifier.height(h))
+}
+
+@Composable
+private fun CurrentIslandMark() {
+    Box(
+        modifier = Modifier
+            .shadow(
+                elevation = 10.dp,
+                shape = CircleShape,
+                ambientColor = VoxPrimary.copy(alpha = 0.23f),
+                spotColor = VoxPrimary.copy(alpha = 0.23f),
+            )
+            .size(108.dp)
+            .background(VoxCoralGlow, CircleShape),
+        contentAlignment = Alignment.Center,
     ) {
-        listOf(10.dp, 18.dp, 24.dp, 18.dp, 10.dp).forEach { barHeight ->
+        Box(
+            modifier = Modifier
+                .size(96.dp)
+                .border(3.dp, VoxPrimary, CircleShape)
+                .background(
+                    Brush.radialGradient(listOf(Color(0xFFFF8A8E), VoxPrimary)),
+                    CircleShape,
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(
+                    modifier = Modifier
+                        .size(width = 38.dp, height = 26.dp)
+                        .background(
+                            Color.White,
+                            RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp, bottomEnd = 10.dp, bottomStart = 3.dp),
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                        repeat(3) {
+                            Box(Modifier.size(5.dp).background(VoxPrimary, CircleShape))
+                        }
+                    }
+                }
+                Box(
+                    modifier = Modifier
+                        .padding(top = 4.dp)
+                        .size(width = 28.dp, height = 18.dp)
+                        .background(
+                            VoxCoralSoft,
+                            RoundedCornerShape(topStart = 3.dp, topEnd = 6.dp, bottomEnd = 6.dp, bottomStart = 6.dp),
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Box(
+                        Modifier
+                            .size(width = 16.dp, height = 2.dp)
+                            .background(Color(0xFFFF8A8E), RoundedCornerShape(1.dp)),
+                    )
+                }
+            }
             Box(
                 Modifier
-                    .width(4.dp)
-                    .height(barHeight)
-                    .background(VoxSuccess, RoundedCornerShape(2.dp)),
+                    .align(Alignment.TopStart)
+                    .offset(x = 9.dp, y = 7.dp)
+                    .size(8.dp)
+                    .background(Color.White.copy(alpha = 0.7f), CircleShape),
+            )
+            Box(
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(x = (-15).dp, y = 11.dp)
+                    .size(6.dp)
+                    .background(Color.White.copy(alpha = 0.55f), CircleShape),
+            )
+        }
+    }
+}
+
+@Composable
+private fun LockedIslandMark() {
+    Box(
+        modifier = Modifier
+            .graphicsLayer { alpha = 0.85f }
+            .shadow(
+                elevation = 4.dp,
+                shape = CircleShape,
+                ambientColor = VoxOnBackground.copy(alpha = 0.03f),
+                spotColor = VoxOnBackground.copy(alpha = 0.03f),
+            )
+            .size(84.dp)
+            .border(1.5.dp, VoxLockedBorder, CircleShape)
+            .background(VoxLocked, CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(68.dp)
+                .background(
+                    Brush.radialGradient(listOf(Color(0xFFEBE6E3), VoxLockedInner)),
+                    CircleShape,
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Box(
+                        Modifier
+                            .size(width = 14.dp, height = 16.dp)
+                            .background(
+                                VoxLockedBorder,
+                                RoundedCornerShape(topStart = 7.dp, topEnd = 4.dp, bottomEnd = 4.dp, bottomStart = 4.dp),
+                            ),
+                    )
+                    Box(
+                        Modifier
+                            .size(width = 14.dp, height = 16.dp)
+                            .background(
+                                VoxLockedBorder,
+                                RoundedCornerShape(topStart = 4.dp, topEnd = 7.dp, bottomEnd = 4.dp, bottomStart = 4.dp),
+                            ),
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .padding(top = 3.dp)
+                        .size(width = 16.dp, height = 14.dp)
+                        .background(VoxLockedText, RoundedCornerShape(7.dp)),
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(x = (-8).dp, y = 8.dp)
+                    .size(14.dp)
+                    .background(VoxSurface, CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    "?",
+                    color = VoxLockedText,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 9.sp,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DistantIslandMark() {
+    Box(
+        modifier = Modifier
+            .graphicsLayer { alpha = 0.75f }
+            .shadow(
+                elevation = 4.dp,
+                shape = CircleShape,
+                ambientColor = VoxGoldBorder.copy(alpha = 0.13f),
+                spotColor = VoxGoldBorder.copy(alpha = 0.13f),
+            )
+            .size(84.dp)
+            .border(1.5.dp, VoxGoldBorder, CircleShape)
+            .background(VoxGoldSoft, CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(68.dp)
+                .background(
+                    Brush.radialGradient(listOf(Color(0xFFF5DFA0), VoxGoldInner)),
+                    CircleShape,
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(
+                    Modifier
+                        .size(width = 22.dp, height = 3.dp)
+                        .background(VoxGoldBorder, RoundedCornerShape(2.dp)),
+                )
+                Box(
+                    modifier = Modifier
+                        .size(width = 18.dp, height = 14.dp)
+                        .background(
+                            VoxGoldBorder,
+                            RoundedCornerShape(topStart = 2.dp, topEnd = 2.dp, bottomEnd = 6.dp, bottomStart = 6.dp),
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Box(
+                        Modifier
+                            .size(width = 8.dp, height = 2.dp)
+                            .background(VoxGoldSoft, RoundedCornerShape(1.dp)),
+                    )
+                }
+                Box(
+                    Modifier
+                        .size(width = 6.dp, height = 3.dp)
+                        .background(Color(0xFFC8A84B), RoundedCornerShape(1.dp)),
+                )
+                Box(
+                    Modifier
+                        .size(width = 16.dp, height = 3.dp)
+                        .background(Color(0xFFC8A84B), RoundedCornerShape(1.dp)),
+                )
+            }
+            Box(
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(x = (-10).dp, y = 10.dp)
+                    .size(10.dp)
+                    .background(Color.White.copy(alpha = 0.7f), CircleShape),
+            )
+            Box(
+                Modifier
+                    .align(Alignment.CenterStart)
+                    .offset(x = 10.dp, y = (-10).dp)
+                    .size(7.dp)
+                    .background(Color.White.copy(alpha = 0.55f), CircleShape),
             )
         }
     }
@@ -481,9 +663,22 @@ private fun IslandInfoCard(
         IslandState.Locked -> VoxOnBackground.copy(alpha = 0.02f)
         IslandState.Distant -> VoxGoldBorder.copy(alpha = 0.08f)
     }
+    val ringColor = when (state) {
+        IslandState.Done -> VoxSuccess
+        IslandState.Current -> VoxPrimary
+        IslandState.Locked -> VoxLockedText
+        IslandState.Distant -> VoxGold
+    }
+    val ringTrack = when (state) {
+        IslandState.Done -> VoxSuccessSoft
+        IslandState.Current -> VoxCoralSoft
+        IslandState.Locked -> VoxLockedInner
+        IslandState.Distant -> VoxGoldBorder.copy(alpha = 0.45f)
+    }
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .height(72.dp)
             .graphicsLayer { alpha = cardAlpha }
             .shadow(elevation = 3.dp, shape = InfoShape, ambientColor = shadowColor, spotColor = shadowColor)
             .border(borderWidth, border, InfoShape)
@@ -492,55 +687,26 @@ private fun IslandInfoCard(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(if (state == IslandState.Done || state == IslandState.Current) 6.dp else 4.dp),
     ) {
-        Text(
-            text = title,
-            color = titleColor,
-            fontWeight = titleWeight,
-            fontSize = titleSize,
-            textAlign = TextAlign.Center,
+        Row(
             modifier = Modifier.fillMaxWidth(),
-        )
-        if (progress != null && (state == IslandState.Done || state == IslandState.Current)) {
-            val track = if (state == IslandState.Done) VoxSuccessSoft else VoxCoralSoft
-            val fill = if (state == IslandState.Done) VoxSuccess else VoxPrimary
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(6.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(track),
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .fillMaxWidth(progress.coerceIn(0f, 1f))
-                            .background(fill),
-                    )
-                }
-                Text(
-                    text = "${(progress * 100f).roundToInt()}%",
-                    color = fill,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 11.sp,
-                    lineHeight = 13.sp,
-                )
-            }
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                text = title,
+                color = titleColor,
+                fontWeight = titleWeight,
+                fontSize = titleSize,
+                modifier = Modifier.weight(1f),
+            )
+            ProgressRing(
+                progress = progress ?: 0f,
+                fill = ringColor,
+                track = ringTrack,
+            )
         }
         if (!hint.isNullOrBlank()) {
-            if (state == IslandState.Current) {
-                Text(
-                    text = hint,
-                    color = VoxPrimary,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 11.sp,
-                    lineHeight = 13.sp,
-                )
-            } else {
+            if (state == IslandState.Locked || state == IslandState.Distant) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -559,8 +725,58 @@ private fun IslandInfoCard(
                         lineHeight = 13.sp,
                     )
                 }
+            } else {
+                Text(
+                    text = hint,
+                    color = ringColor,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 11.sp,
+                    lineHeight = 13.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
         }
+    }
+}
+
+@Composable
+private fun ProgressRing(
+    progress: Float,
+    fill: Color,
+    track: Color,
+) {
+    val clamped = progress.coerceIn(0f, 1f)
+    Box(Modifier.size(32.dp), contentAlignment = Alignment.Center) {
+        Canvas(Modifier.size(28.dp)) {
+            val stroke = 3.dp.toPx()
+            val arcSize = Size(size.minDimension, size.minDimension)
+            drawArc(
+                color = track,
+                startAngle = 0f,
+                sweepAngle = 360f,
+                useCenter = false,
+                style = Stroke(width = stroke, cap = StrokeCap.Round),
+                size = arcSize,
+            )
+            if (clamped > 0f) {
+                drawArc(
+                    color = fill,
+                    startAngle = -90f,
+                    sweepAngle = 360f * clamped,
+                    useCenter = false,
+                    style = Stroke(width = stroke, cap = StrokeCap.Round),
+                    size = arcSize,
+                )
+            }
+        }
+        Text(
+            text = "${(clamped * 100f).roundToInt()}%",
+            color = fill,
+            fontWeight = FontWeight.Bold,
+            fontSize = 8.sp,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 
