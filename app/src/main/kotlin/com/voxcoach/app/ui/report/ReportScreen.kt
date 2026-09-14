@@ -52,6 +52,9 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import com.voxcoach.core.domain.rp.RpPolicy
+import com.voxcoach.core.domain.rp.RpSegmentMapper
+import com.voxcoach.core.domain.rp.RpSentence
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -62,7 +65,12 @@ data class ReportUiState(
     val collectedIds: Set<String> = emptySet(),
     val audioPath: String? = null,
     val turns: List<Turn> = emptyList(),
+    val sentences: List<RpSentence> = emptyList(),
+    val sessionDurationMs: Long = 0L,
     val playing: Boolean = false,
+    val playbackRate: Float = RpPolicy.NORMAL_RATE,
+    val loopStartMs: Long? = null,
+    val loopEndMs: Long? = null,
     val playbackError: String? = null,
 )
 
@@ -92,6 +100,9 @@ class ReportViewModel @Inject constructor(
                     ev = ev,
                     audioPath = session?.audioPath,
                     turns = turns,
+                    sentences = RpSegmentMapper.sentences(turns, ev?.items.orEmpty()),
+                    sessionDurationMs = turns.filter { it.endMs != null && it.startMs != null }
+                        .maxOfOrNull { (it.endMs ?: 0) - (it.startMs ?: 0) } ?: 0L,
                     message = when {
                         ev == null -> "暂无评测结果"
                         else -> null
@@ -102,6 +113,85 @@ class ReportViewModel @Inject constructor(
                 )
             }
         }
+    }
+
+    fun playOrPause() {
+        val path = _state.value.audioPath ?: run {
+            _state.update { it.copy(playbackError = "本会话无本地录音") }
+            return
+        }
+        if (!File(path).exists()) {
+            _state.update { it.copy(playbackError = "录音文件不存在：$path") }
+            return
+        }
+        val p = player
+        if (p == null) {
+            playFrom(_state.value.loopStartMs ?: 0L)
+            return
+        }
+        if (_state.value.playing) {
+            pausePlayback()
+        } else {
+            runCatching {
+                p.start()
+                _state.update { it.copy(playing = true, playbackError = null) }
+            }.onFailure { e ->
+                _state.update { it.copy(playbackError = e.message ?: "播放失败") }
+            }
+        }
+    }
+
+    fun playFrom(startMs: Long) {
+        val path = _state.value.audioPath ?: run {
+            _state.update { it.copy(playbackError = "本会话无本地录音") }
+            return
+        }
+        if (!File(path).exists()) {
+            _state.update { it.copy(playbackError = "录音文件不存在：$path") }
+            return
+        }
+        runCatching {
+            releasePlayer()
+            player = MediaPlayer().apply {
+                setDataSource(path)
+                setOnCompletionListener {
+                    _state.update { s -> s.copy(playing = false) }
+                }
+                prepare()
+                seekTo(startMs.toInt().coerceAtLeast(0))
+                start()
+            }
+            _state.update { it.copy(playing = true, playbackError = null, message = "从 ${startMs}ms 播放") }
+        }.onFailure { e ->
+            _state.update { it.copy(playing = false, playbackError = e.message ?: "播放失败") }
+        }
+    }
+
+    fun setPlaybackRate(rate: Float) {
+        val clamped = rate.coerceIn(RpPolicy.SLOW_RATE, RpPolicy.NORMAL_RATE)
+        runCatching {
+            player?.playbackParams = player?.playbackParams?.setSpeed(clamped) ?: return@runCatching
+        }
+        _state.update { it.copy(playbackRate = clamped) }
+    }
+
+    fun setLoop(startMs: Long?, endMs: Long?) {
+        val clamped = RpSegmentMapper.clampLoop(
+            startMs ?: 0L,
+            endMs ?: _state.value.sessionDurationMs,
+            _state.value.sessionDurationMs,
+        )
+        _state.update {
+            it.copy(
+                loopStartMs = clamped?.startMs,
+                loopEndMs = clamped?.endMs,
+                message = if (clamped != null) "A-B 复读已设置" else "A-B 区间太短",
+            )
+        }
+    }
+
+    fun clearLoop() {
+        _state.update { it.copy(loopStartMs = null, loopEndMs = null, message = "已清除 A-B 复读") }
     }
 
     fun playFull() {
@@ -262,19 +352,42 @@ fun ReportScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Button(
-                        onClick = {
-                            if (state.playing) viewModel.pausePlayback() else viewModel.playFull()
-                        },
-                        modifier = Modifier.weight(1f),
-                    ) {
+                    Button(onClick = { viewModel.playOrPause() }, modifier = Modifier.weight(1f)) {
                         Icon(
                             if (state.playing) Icons.Default.Pause else Icons.Default.PlayArrow,
                             contentDescription = null,
                         )
                         Spacer(Modifier.padding(4.dp))
-                        Text(if (state.playing) "暂停" else "播放整段")
+                        Text(if (state.playing) "暂停" else "播放")
                     }
+                    OutlinedButton(
+                        onClick = {
+                            if (state.playbackRate == RpPolicy.SLOW_RATE) {
+                                viewModel.setPlaybackRate(RpPolicy.NORMAL_RATE)
+                            } else {
+                                viewModel.setPlaybackRate(RpPolicy.SLOW_RATE)
+                            }
+                        },
+                    ) {
+                        Text(if (state.playbackRate == RpPolicy.SLOW_RATE) "0.75x" else "1x")
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = { viewModel.setLoop(0L, state.sessionDurationMs) },
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text("设置 A-B")
+                    }
+                    OutlinedButton(onClick = { viewModel.clearLoop() }) {
+                        Text("清除 A-B")
+                    }
+                }
+                if (state.loopStartMs != null && state.loopEndMs != null) {
+                    Text(
+                        "A-B 区间：${state.loopStartMs}–${state.loopEndMs}ms",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
                 }
                 val userTurns = state.turns.filter { it.role == TurnRole.USER && it.startMs != null }
                 if (userTurns.isNotEmpty()) {

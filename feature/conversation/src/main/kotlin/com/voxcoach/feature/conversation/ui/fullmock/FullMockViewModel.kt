@@ -30,6 +30,8 @@ import com.voxcoach.core.domain.speech.AsrEngine
 import com.voxcoach.core.domain.speech.SessionAudioCapture
 import com.voxcoach.core.domain.speech.TtsEngine
 import dagger.hilt.android.lifecycle.HiltViewModel
+import com.voxcoach.core.domain.cv.BargeInController
+import com.voxcoach.core.domain.cv.BargeInPhase
 import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.Job
@@ -75,6 +77,7 @@ class FullMockViewModel @Inject constructor(
     private var sessionCreated = false
     private var audioPath: String? = null
     private var listenStartedMs: Long? = null
+    private var pendingBargeInAtMs: Long? = null
     private var speakStartedMs: Long? = null
     private var started = false
     private var finishingSpeak = false
@@ -228,6 +231,12 @@ class FullMockViewModel @Inject constructor(
         pendingTurns += aiTurn
         turnRepository.insert(aiTurn)
     }
+
+    private fun qaBaseMeta(stage: FullMockUiState.Stage): String =
+        "{\"source\":\"mock_${stage.name.lowercase()}_answer\"}"
+
+    private fun bargeAtMeta(baseMeta: String, bargeAtMs: Long?): String =
+        bargeAtMs?.let { BargeInController.withBargeInMeta(baseMeta, it) } ?: baseMeta
 
     // region Part 1
     private suspend fun askPart1Question() {
@@ -557,10 +566,24 @@ class FullMockViewModel @Inject constructor(
         if (st.ending) return
         if (st.stage != FullMockUiState.Stage.Part1 && st.stage != FullMockUiState.Stage.Part3) return
         if (st.phase != FullMockUiState.Phase.AwaitingAnswer &&
+            st.phase != FullMockUiState.Phase.Asking &&
             st.phase != FullMockUiState.Phase.Listening
         ) {
             return
         }
+        val bargePhase = when (st.phase) {
+            FullMockUiState.Phase.Asking -> BargeInPhase.TTS_PLAY
+            FullMockUiState.Phase.Listening -> BargeInPhase.LISTENING
+            else -> BargeInPhase.IDLE
+        }
+        val elapsed = if (sessionAudioCapture.isRecording) {
+            sessionAudioCapture.elapsedMs()
+        } else {
+            System.currentTimeMillis() - sessionStartedAt
+        }
+        val decision = BargeInController.onMicPressed(bargePhase, elapsed)
+        pendingBargeInAtMs = decision.bargeInAtMs
+        pipelineJob?.cancel()
         listenJob?.cancel()
         viewModelScope.launch { ttsEngine.stopAll() }
         listenStartedMs = if (sessionAudioCapture.isRecording) sessionAudioCapture.elapsedMs() else null
@@ -569,7 +592,11 @@ class FullMockViewModel @Inject constructor(
                 phase = FullMockUiState.Phase.Listening,
                 partialTranscript = "",
                 finalTranscript = "",
-                statusMessage = "${it.stageLabelZh} · ${it.progressLabel} · 正在听…",
+                statusMessage = if (decision.shouldInterrupt) {
+                    "${it.stageLabelZh} · ${it.progressLabel} · 已打断，正在听…"
+                } else {
+                    "${it.stageLabelZh} · ${it.progressLabel} · 正在听…"
+                },
                 error = null,
             )
         }
@@ -658,7 +685,7 @@ class FullMockViewModel @Inject constructor(
                     seq = turnSeq,
                     startMs = turnStartMs,
                     endMs = turnEndMs,
-                    llmMetaJson = """{"source":"mock_${st.stage.name.lowercase()}_answer"}""",
+                    llmMetaJson = bargeAtMeta(qaBaseMeta(st), pendingBargeInAtMs.also { pendingBargeInAtMs = null }),
                 )
                 pendingTurns += userTurn
                 turnRepository.insert(userTurn)

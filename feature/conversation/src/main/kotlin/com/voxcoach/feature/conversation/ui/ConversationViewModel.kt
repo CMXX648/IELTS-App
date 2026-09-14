@@ -29,6 +29,11 @@ import com.voxcoach.core.domain.speech.AsrEngine
 import com.voxcoach.core.domain.speech.SessionAudioCapture
 import com.voxcoach.core.domain.speech.TtsEngine
 import dagger.hilt.android.lifecycle.HiltViewModel
+import com.voxcoach.core.domain.cv.BargeInController
+import com.voxcoach.core.domain.cv.BargeInPhase
+import com.voxcoach.core.domain.ev.HintCard
+import com.voxcoach.core.domain.ev.HintParser
+import com.voxcoach.core.domain.ev.HintPolicy
 import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.Job
@@ -63,6 +68,7 @@ class ConversationViewModel @Inject constructor(
 
     private var listenJob: Job? = null
     private var pipelineJob: Job? = null
+    private var hintJob: Job? = null
     private val history = mutableListOf<ChatMessage>()
     private val pendingTurns = mutableListOf<Turn>()
     private var sessionId: String = sessionIdArg ?: UUID.randomUUID().toString()
@@ -71,6 +77,8 @@ class ConversationViewModel @Inject constructor(
     private var sessionCreated = false
     private var audioPath: String? = null
     private var listenStartedMs: Long? = null
+    private var pendingBargeInAtMs: Long? = null
+    private var hintCard: HintCard? = null
 
     init {
         viewModelScope.launch {
@@ -158,8 +166,66 @@ class ConversationViewModel @Inject constructor(
         }
     }
 
+    fun setHintEnabled(enabled: Boolean) {
+        if (_uiState.value.hintEnabled == enabled) return
+        hintJob?.cancel()
+        if (!enabled) hintCard = null
+        _uiState.update {
+            it.copy(
+                hintEnabled = enabled,
+                hintText = if (enabled) it.hintText else null,
+                hintVisible = if (enabled) it.hintVisible else false,
+            )
+        }
+    }
+
+    fun dismissHint() {
+        hintJob?.cancel()
+        hintCard = null
+        _uiState.update { it.copy(hintText = null, hintVisible = false) }
+    }
+
+    private fun scheduleHint(hint: String?) {
+        hintJob?.cancel()
+        val current = _uiState.value
+        if (!current.hintEnabled || hint.isNullOrBlank()) {
+            hintCard = null
+            _uiState.update { it.copy(hintText = null, hintVisible = false) }
+            return
+        }
+        val card = HintParser.buildCard(hint, System.currentTimeMillis()) ?: run {
+            hintCard = null
+            _uiState.update { it.copy(hintText = null, hintVisible = false) }
+            return
+        }
+        hintCard = card
+        _uiState.update { it.copy(hintText = card.text, hintVisible = true) }
+        hintJob = viewModelScope.launch {
+            kotlinx.coroutines.delay(HintPolicy.AUTO_DISMISS_MS)
+            if (hintCard?.shownAtMs == card.shownAtMs) {
+                hintCard = null
+                _uiState.update { it.copy(hintText = null, hintVisible = false) }
+            }
+        }
+    }
+
     fun onMicPressed() {
         if (_uiState.value.ending || _uiState.value.phase == ConversationUiState.Phase.Evaluating) return
+        val bargePhase = when (_uiState.value.phase) {
+            ConversationUiState.Phase.Thinking -> BargeInPhase.STREAMING_AI
+            ConversationUiState.Phase.Speaking -> BargeInPhase.TTS_PLAY
+            ConversationUiState.Phase.Listening -> BargeInPhase.LISTENING
+            else -> BargeInPhase.IDLE
+        }
+        val elapsed = if (sessionAudioCapture.isRecording) {
+            sessionAudioCapture.elapsedMs()
+        } else {
+            System.currentTimeMillis() - sessionStartedAt
+        }
+        val decision = BargeInController.onMicPressed(bargePhase, elapsed)
+        pendingBargeInAtMs = decision.bargeInAtMs
+        hintJob?.cancel()
+        hintCard = null
         pipelineJob?.cancel()
         listenJob?.cancel()
         viewModelScope.launch { ttsEngine.stopAll() }
@@ -170,7 +236,10 @@ class ConversationViewModel @Inject constructor(
                 partialTranscript = "",
                 finalTranscript = "",
                 assistantText = "",
-                statusMessage = "正在听…",
+                hintText = null,
+                hintVisible = false,
+                bargeInCount = if (decision.shouldInterrupt) it.bargeInCount + 1 else it.bargeInCount,
+                statusMessage = if (decision.shouldInterrupt) "已打断，正在听…" else "正在听…",
                 error = null,
             )
         }
@@ -259,6 +328,8 @@ class ConversationViewModel @Inject constructor(
                     )
                 }
                 turnSeq += 1
+                val bargeAt = pendingBargeInAtMs
+                pendingBargeInAtMs = null
                 val userTurn = Turn(
                     id = UUID.randomUUID().toString(),
                     sessionId = sessionId,
@@ -268,6 +339,7 @@ class ConversationViewModel @Inject constructor(
                     seq = turnSeq,
                     startMs = turnStartMs,
                     endMs = turnEndMs,
+                    llmMetaJson = bargeAt?.let { BargeInController.withBargeInMeta(null, it) },
                 )
                 pendingTurns += userTurn
                 turnRepository.insert(userTurn)
@@ -301,7 +373,8 @@ class ConversationViewModel @Inject constructor(
                     }
                 }
                 val full = sb.toString().trim()
-                history += ChatMessage(ChatMessage.Role.ASSISTANT, full)
+                val (reply, hint) = HintParser.splitReply(full)
+                history += ChatMessage(ChatMessage.Role.ASSISTANT, reply)
                 turnSeq += 1
                 val aiStart = if (sessionAudioCapture.isRecording) {
                     sessionAudioCapture.elapsedMs()
@@ -312,7 +385,7 @@ class ConversationViewModel @Inject constructor(
                     id = UUID.randomUUID().toString(),
                     sessionId = sessionId,
                     role = TurnRole.AI,
-                    text = full,
+                    text = reply,
                     textSource = TextSource.EDITED,
                     seq = turnSeq,
                     startMs = aiStart,
@@ -334,7 +407,7 @@ class ConversationViewModel @Inject constructor(
                     it.copy(
                         phase = ConversationUiState.Phase.Speaking,
                         statusMessage = "播放中…",
-                        assistantText = full,
+                        assistantText = reply,
                         turnCount = userTurnPairs,
                         lastLatency = (it.lastLatency ?: TurnLatency(asrFinalAt = asrFinalAt)).copy(
                             llmFirstTokenAt = llmFirstTokenAt,
@@ -342,8 +415,9 @@ class ConversationViewModel @Inject constructor(
                         ),
                     )
                 }
-                if (full.isNotBlank()) {
-                    ttsEngine.speak(Sentence(full), TtsOptions(languageTag = "en-GB"))
+                scheduleHint(hint)
+                if (reply.isNotBlank()) {
+                    ttsEngine.speak(Sentence(reply), TtsOptions(languageTag = "en-GB"))
                 }
                 _uiState.update {
                     it.copy(
@@ -352,6 +426,8 @@ class ConversationViewModel @Inject constructor(
                     )
                 }
             }.onFailure { e ->
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                pendingBargeInAtMs = null
                 _uiState.update {
                     it.copy(
                         phase = ConversationUiState.Phase.Idle,
@@ -454,6 +530,7 @@ class ConversationViewModel @Inject constructor(
     }
 
     override fun onCleared() {
+        hintJob?.cancel()
         runCatching { sessionAudioCapture.release() }
         super.onCleared()
     }
@@ -461,6 +538,9 @@ class ConversationViewModel @Inject constructor(
     companion object {
         private const val SYSTEM_PROMPT =
             "You are a friendly IELTS Speaking examiner. Reply in clear English, " +
-                "ask one follow-up question, keep answers under 3 sentences."
+                "ask one follow-up question, keep answers under 3 sentences. " +
+                "Optionally append one final line 'HINT: <≤20 words study tip>' " +
+                "with a tiny actionable tip (linking word, tense, or better word). " +
+                "Omit the HINT line when there is nothing specific to fix."
     }
 }

@@ -24,12 +24,14 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -62,6 +64,8 @@ fun ConversationRoute(
         onMicPressed = viewModel::onMicPressed,
         onMicReleased = viewModel::onMicReleased,
         onEndSession = viewModel::endSession,
+        onSetHintEnabled = viewModel::setHintEnabled,
+        onDismissHint = viewModel::dismissHint,
     )
 }
 
@@ -73,6 +77,8 @@ fun ConversationScreen(
     onMicPressed: () -> Unit,
     onMicReleased: () -> Unit,
     onEndSession: () -> Unit,
+    onSetHintEnabled: (Boolean) -> Unit,
+    onDismissHint: () -> Unit,
 ) {
     Scaffold(
         topBar = {
@@ -143,8 +149,46 @@ fun ConversationScreen(
                         label = { Text("● 本地录音中（不上传）") },
                     )
                 }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        selected = state.hintEnabled,
+                        onClick = { onSetHintEnabled(!state.hintEnabled) },
+                        label = { Text(if (state.hintEnabled) "HINT 开" else "HINT 关") },
+                    )
+                    if (state.bargeInCount > 0) {
+                        AssistChip(
+                            onClick = {},
+                            label = { Text("打断 ${state.bargeInCount}") },
+                        )
+                    }
+                }
                 state.error?.let {
                     Text(text = it, color = MaterialTheme.colorScheme.error)
+                }
+                if (state.hintVisible && !state.hintText.isNullOrBlank()) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        ),
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                "💡 ${state.hintText}",
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(12.dp),
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                            TextButton(onClick = onDismissHint) {
+                                Text("×")
+                            }
+                        }
+                    }
                 }
                 LatencyChips(state)
                 BubbleCard(title = "你说", body = state.partialTranscript.ifBlank { "…" })

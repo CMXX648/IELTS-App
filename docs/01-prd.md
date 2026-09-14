@@ -107,7 +107,7 @@ flowchart TB
 | CV-01 | 自由话题对话：选择 Topic 后开始多轮对话，AI 扮演 IELTS Examiner 按该话题推进 | P0 |
 | CV-02 | 口试流程模拟：Part 1（问答）→ Part 2（cue card，1min 准备提示 + 1–2min 独白）→ Part 3（深度问答），完整计时 | P0 |
 | CV-03 | 边说边显字：ASR 提供 partial results，用户说话时实时显示转写文字 | P0（产品目标；当前 MiMo 实现为松手后出转写，见 README 团队约定） |
-| CV-04 | 打断（barge-in）：AI 语音（TTS）播放期间用户开口即停止播放并开始识别 | P1 |
+| CV-04 | 打断（barge-in）：AI 语音（TTS）/ 思考中用户按下麦克风 → ≤400ms 内停 TTS、断 LLM 尾、进聆听；打断点记入用户轮次 `llmMetaJson.bargeInAtMs` 供 RP 复盘（`core:domain/cv/BargeIn.kt` + 4 个 CV ViewModel） | P1 ✅ |
 | CV-05 | 话题引导与救场：用户卡壳时可选「提示」按钮，AI 给出追问/关键词；可设置 AI 耐心度（追问倾向） | P1 |
 | CV-06 | 对话难度自适应：根据用户 Band 历史与当前话题调节 AI 词汇/句式复杂度 | P1 |
 | CV-07 | 会话控制：开始/暂停/结束、剩余时间显示、轮数统计 | P0 |
@@ -121,7 +121,7 @@ flowchart TB
 | GR-02 | 产出型任务：给出句型骨架 + 话题提示，要求用户**口头**产出句子（非选择/填空） | P0 |
 | GR-03 | 结构判定与纠错：ASR 转写后判定是否命中目标句式；语法错误就地给出「你的句子 → 修正 → 为什么」 | P0 |
 | GR-04 | 句式转换练习：将简单句口头改写为目标结构（如 It's important to… → What matters is that…） | P1 |
-| GR-05 | 影子跟读（Shadowing）：TTS 播标准句 → 用户跟读 → 发音/节奏评分 | P1 |
+| GR-05 | 影子跟读（Shadowing）：TTS 播示范句 → 用户跟读 → 词重叠预筛 → LLM 判定（≤400 token/句，失败离线给修正）（`core:domain/gr/ShadowingJudge.kt` + `DrillViewModel.judgeShadow` + `DrillScreen` 模式切换） | P1 ✅ |
 | GR-06 | 语法点掌握度追踪：每个 GrammarPoint 有掌握度，融入 PF 统计 | P1 |
 
 #### EV 评分反馈
@@ -134,15 +134,15 @@ flowchart TB
 | EV-04 | 更优表达示范：对用户的平庸句给出 2 种更高分表达 | P0 |
 | EV-05 | 逐句点评：按句段回放录音并播放 AI 对该句的点评（与 RP 联动） | P1 |
 | EV-06 | 评分稳定性校准：内置「已标定样例评测」用于校准 Prompt（开发期工具） | P1 |
-| EV-07 | HINT 轮内即时轻反馈：默认关闭；开启时每轮结束后 1 秒内给 1 条小提示，不打断节奏 | P1 |
+| EV-07 | HINT 轮内即时轻反馈：默认关闭；开启时每轮结束 ≤0.8s 浮 1 条小卡（10s 自消），复用流式 `HINT:` 标记不额外调用（`core:domain/ev/Hint.kt` + `ConversationViewModel.scheduleHint` + `ConversationScreen` 开关） | P1 ✅ |
 
 #### RP 录音回放
 
 | ID | 需求 | 优先级 |
 |---|---|---|
 | RP-01 | 会话全程录音，结束后按 Turn/句段回放 | P0 |
-| RP-02 | 波形/分段时间轴显示，点击某句定位回放 | P1 |
-| RP-03 | 0.75x/1x 慢速回放与句间暂停（A-B 复读区间） | P1 |
+| RP-02 | 句段时间轴（`turn.startMs/endMs` 对齐 `FeedbackItem.tRange`），点击某句定位回放（`core:domain/rp/RpSegmentMapper.kt` + `ReportScreen`） | P1 ✅ |
+| RP-03 | 0.75x/1x 慢速回放（`MediaPlayer.playbackParams.setSpeed`）与 A-B 复读区间（`RpSegmentMapper.clampLoop`） | P1 ✅ |
 | RP-04 | 本地录音文件管理与空间提示（自动清理策略） | P1 |
 
 #### VB 错题本与词汇
@@ -170,9 +170,9 @@ flowchart TB
 |---|---|---|
 | ST-01 | 语音与 LLM 配置：仅 Base URL + API Key（Keystore 加密）；对话/ASR/TTS 模型内置为 MiMo-V2.5，不手填 | P0 |
 | ST-02 | ASR / TTS 引擎选择与降级状态显示 | P1 |
-| ST-03 | 服务器配置与同步开关 | P1 |
-| SY-01 | 会话记录/评测/错题本/档案增量同步到自有服务器 | P1 |
-| SY-02 | 多设备拉取与冲突处理（时间戳 + oplog，见 05 文档） | P1 |
+| ST-03 | 服务器配置与同步开关；`SyncContract` 路径/头常量已落地，UI 设置页 ST-03 开关留 M3 后期 | P1 ☐ |
+| SY-01 | 会话记录/评测/错题本/语料/档案/语法点掌握度增量同步到自有服务器；纯规则已落地 `core:domain/sync/SyncResolver.kt`（白名单、LWW、墓碑），`server/` Go 二进制 + 客户端 `SyncGateway`/Room 迁移留 M3 后期 | P1 ✅/☐ |
+| SY-02 | 多设备拉取与冲突处理（时间戳 + oplog + deviceId 裁决，见 05 文档）；`SyncContract` 路径/头常量与 Go 端共用 | P1 ✅/☐ |
 | SY-03 | 离线可用：断网可练习（需本地 LLM 不可用时的说明），联网自动补传 | P0 |
 
 ---
@@ -189,7 +189,7 @@ flowchart TB
 6. MiMo 直连配置（ST-01：Base URL + Key）+ 本地持久化（不依赖自有同步服务器的完整闭环）
 7. 断网兜底提示与恢复（SY-03 的本地部分）
 
-**MVP 不含**：云同步（P1）、barge-in、影子跟读、逐句点评（P1），这些进入 v1.1+。
+**MVP 不含**：错题重练转 GR（VB-03）、语料收藏（VB-04）；端云同步服务端部署 / Key 代理开关（留 M3 后期）。barge-in / 影子跟读 / HINT / RP 逐句复盘已在 M3 阶段1+2 落地。
 
 ---
 

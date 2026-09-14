@@ -142,7 +142,7 @@ flowchart LR
 - 默认 **MiMo-V2.5 TTS**（`MimoTtsEngine`，`model=mimo-v2.5-tts`，预置音色 `Chloe`，SSE `audio.format=pcm16` @ 24 kHz，`AudioTrack` 播放）。与对话共用设置中的 Base URL + API Key。
 - assistant 消息 = 要合成的英文；user 消息 = 英音考官风格指令（`MimoDefaults.TTS_STYLE`）。
 - **流式播报队列**（产品目标）：LLM 流式按句入队即播。当前实现多为整段回复后再 TTS。
-- **barge-in**（P1）：按下麦克风应 `ttsEngine.stopAll()`；完整 barge-in 未做。
+- **barge-in**（P1，✅ 已实现）：`core:domain/cv/BargeInController` 状态机 + `withBargeInMeta` 合并 `bargeInAtMs` 到用户轮次 `llmMetaJson`；4 个 CV ViewModel（`Conversation/Part1/Part3/FullMock`）`onMicPressed` 统一接线，`Thinking/Speaking/Asking/Intro` 均允许打断，`CancellationException` 在 pipeline 失败路径 re-throw 避免误报。
 - `SystemTtsEngine` 仍在仓库，**未绑定**。
 
 ---
@@ -156,10 +156,10 @@ flowchart LR
 - 三档用法：
   | 用途 | 模型档建议 | 输出形态 | 预算 |
   |---|---|---|---|
-  | 实时对话 | `mimo-v2.5`（固定，不手填） | 流式文本 | 一轮 ≈ 400–800 token |
-  | GR 单句判定 | 同左 | JSON 小对象 | ≤ 400 token/句 |
+  | 实时对话 | `mimo-v2.5`（固定，不手填） | 流式文本（可选尾行 `HINT:` 标记，`HintParser.splitReply` 拆分） | 一轮 ≈ 400–800 token |
+  | GR 单句判定 / 影子跟读 | 同左 | JSON 小对象 | ≤ 400 token/句 |
   | EV 四维评测 | 同左（暂不拆强模型） | JSON Schema 结构化 | 一次 ≈ 2–4k token |
-- **系统提示工程**：对话（考官人格 + 话题 + Stage + 目标语法 + 用户画像摘要 + 打断纪律）；EV（四维 Rubric 原文 + 证据强制 + 0.5 档规则 + JSON Schema 约束）。Prompt 版本号随 EV 结果落库（03 §8）。
+- **系统提示工程**：对话（考官人格 + 话题 + Stage + 目标语法 + 用户画像摘要 + 打断纪律 + 可选 `HINT:` 尾行指令）；EV（四维 Rubric 原文 + 证据强制 + 0.5 档规则 + JSON Schema 约束）。Prompt 版本号随 EV 结果落库（03 §8）。
 
 ### 5.2 上下文管理（成本与质量平衡）
 
@@ -207,10 +207,11 @@ erDiagram
 | `drill_attempts` | id, grammarPointId, promptId, userSentence, hit(bool), feedback(json), triedAt | GR 记录与掌握度计算源 |
 | `vocab_notes` | id, term, meaning, example, exampleSource, topicId, sessionId, audioHint | 语料收藏 |
 | `user_profile` | version, stage, targetBand, dimTrendCache(json), streak, totals | 单行档案 + 缓存 |
-| `sync_state` | entity, entityId, updatedAt, op(UP/DEL), pushedAt | 增量同步 oplog |
+| `sync_state` | entity, entityId, updatedAt, op(UP/DEL), pushedAt | 增量同步 oplog（纯规则已落地 `core:domain/sync/SyncResolver.kt`：白名单 `WHITELIST={session,ev_result,mistake,vocab_note,profile,grammar_progress}`、`NEVER_SYNC={turn,turns,recording,audio,wav}`、LWW + deviceId + 墓碑；路径/头常量见 `core:domain/model/SyncContract.kt`；Room 表 + 客户端 `SyncGateway` 留 M3 后期） |
 
 - 统计聚合：趋势类读 `ev_results`/`sessions` 用 Room 原生聚合或预聚合 `dim_trend_cache`（PF 页秒开）。
 - **种子数据**（GrammarPoint/Topic 词场）版本化：`SeedDataStore` 按 schemaVersion 增量打补丁，勿覆盖用户自定义。
+- **M3 新增 `core:domain` 纯规则（JVM 单测覆盖，无 Android 依赖）**：`cv/BargeIn.kt`（`BargeInController` 状态机 + `withBargeInMeta`）、`ev/Hint.kt`（`HintPolicy`/`HintParser`，`HINT:` 流式标记拆分）、`gr/ShadowingJudge.kt`（词重叠预筛 + LLM 判定 prompt）、`rp/RpSegmentMapper.kt`（`turn.startMs/endMs` ↔ `FeedbackItem.tRange` 对齐 + A-B 钳位）、`sync/SyncResolver.kt`（LWW + 白名单）、`model/SyncContract.kt`（共用路径/头常量）。
 
 ---
 

@@ -2,7 +2,7 @@
 
 | 项目 | 内容 |
 |---|---|
-| 文档版本 | v0.9.1（澄清：自有服务器仍不存音频；MiMo ASR 是厂商云，不是本后端） |
+| 文档版本 | v0.9.2（M3 阶段1 落地：客户端同步纯规则 + 契约已冻结于 `core:domain/sync/SyncResolver.kt` 与 `core:domain/model/SyncContract.kt`，Go 端实现时直接复用路径/头/白名单常量；`server/` Go 二进制本身留 M3 后期） |
 | 部署目标 | 用户自有 2 核 2G 服务器（Linux） |
 | 职责边界 | 会话/评测/错题/语料/档案的**云端镜像与多设备同步**、可选的 **LLM Key 代理**、未来 Web 统计数据源 |
 | 不做 | 不存录音音频、不跑任何大模型/Whisper、不做多租户 SaaS |
@@ -63,6 +63,7 @@ flowchart LR
 
 - 服务端存 Key 的 **SHA-256 哈希**（加盐）；客户端存 Key 于 Android Keystore 封装（04 §5.1）。
 - 单设备换机：注册新设备 → 首次 `/sync/pull?full=1` 拉全量（个人数据量小，全量拉取完全可接受）。
+- **契约冻结**：路径/头常量已落地客户端 `core:domain/model/SyncContract.kt`（`PUSH_PATH`/`PULL_PATH`/`HEALTH_PATH`/`REGISTER_DEVICE_PATH`/`REVOKE_DEVICE_PATH`/`DEVICE_KEY_HEADER`/`entities`/`excluded`），Go 端实现直接复用，避免口径漂移。同步规则（白名单、LWW + deviceId 裁决、墓碑、cursor 全量兜底）已 JVM 单测覆盖（`core:domain/sync/SyncResolverTest`）。
 
 ### 4.2 增量同步（SY 核心）
 

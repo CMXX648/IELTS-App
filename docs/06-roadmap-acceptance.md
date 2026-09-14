@@ -2,7 +2,7 @@
 
 | 项目 | 内容 |
 |---|---|
-| 文档版本 | v0.9.1（记录：默认 ASR/TTS/对话改为 MiMo-V2.5；M1 系统引擎路径已替换） |
+| 文档版本 | v0.9.2（M3 阶段1+2 落地：CV-04 barge-in / EV-07 HINT / GR-05 影子跟读 / RP 逐句复盘+0.75x+A-B / SY 纯规则与契约；`server/` Go 二进制 + 客户端 `SyncGateway`/Room 迁移留 M3 后期） |
 | 关联 | 01 §6 里程碑概览、02 学习路径、03 功能规格、04 Android 架构、05 后端契约 |
 | 用途 | ① 后续编码阶段的执行地图；② 设计文档全库一致性的校验结论 |
 
@@ -15,7 +15,7 @@
 | **M0** | 设计定稿 | 本套文档评审冻结 | — | 本文档 §4 开放问题全部给出结论；术语表无漂移 |
 | **M1** | 工程骨架 + 技术验证 | Android 工程初始化；打通「ASR→LLM→TTS」单轮通路；建立编译/版本基线 | M0 | 真机完成 ≥3 轮稳定对话；延迟预算摸底数据出报告 |
 | **M2** | MVP 功能闭环（P0） | CV 自由对话、GR 单句产出判定、EV 四维报告、录音与回放基础、错题本基础、档案基础、直连 LLM 配置 | M1 | 连续 7 天日常自用无阻断；自测用例全绿 |
-| **M3** | 完整学习闭环（P1） | 模拟口试 P1/P2/P3、barge-in、影子跟读、逐句复盘、云同步（服务器上线）、HINT | M2 | 双端同步验证通过；弱网/离线场景通过 |
+| **M3** | 完整学习闭环（P1） | 模拟口试 P1/P2/P3（✅ M2 已超前）、barge-in（✅）、影子跟读（✅）、逐句复盘+0.75x+A-B（✅）、HINT（✅）、云同步与 LLM Key 代理（✅ 纯规则+契约，☐ `server/` Go 二进制 + 客户端 `SyncGateway`/Room 迁移 留 M3 后期） | M2 | 双端同步验证通过；弱网/离线场景通过（服务端部署前以本地闭环为主） |
 | **M4** | 发布打磨 | 大屏/深色/无障碍收尾、录音空间管理、隐私合规自查、正式签名包 | M3 | 可安装正式版；首轮 7.5 差距报告可读 |
 
 > 编码阶段的颗粒度任务（issues/backlog）在 M1 开始前从本文档各里程碑拆解生成。
@@ -58,19 +58,21 @@
 ### M3 完整学习闭环（预计 3–5 周）
 
 **任务**
-1. 模拟口试 P1/P2/P3 + 完整流程（Part 2 计时与 cue card）。
-2. barge-in（04 §4）；GR 影子跟读（GR-05）；逐句复盘 RP（句段索引）。
-3. 服务器上线：05 §8 部署、设备注册、增量同步、冲突 LWW 验证；模式 B 代理可选开关。
-4. HINT（EV-07）。
+1. 模拟口试 P1/P2/P3 + 完整流程（Part 2 计时与 cue card）。✅ M2 已超前落地（`feature:conversation` Part1/2/3/FullMock + `Part2CueCardBank` 60s/120s 计时）。
+2. barge-in（04 §4）；✅ `core:domain/cv/BargeIn.kt` + 4 个 CV ViewModel 接线；打断点写用户轮次 `llmMetaJson.bargeInAtMs`。
+3. GR 影子跟读（GR-05）；✅ `core:domain/gr/ShadowingJudge.kt` + `DrillViewModel.judgeShadow`（词重叠预筛 + LLM 判定 ≤400 token/句，失败离线给修正）+ `DrillScreen` 模式切换。
+4. 逐句复盘 RP（句段索引）；✅ `core:domain/rp/RpSegmentMapper.kt` 对齐 `turn.startMs/endMs` ↔ `FeedbackItem.tRange`；`ReportScreen` 加 1x/0.75x + A-B 复读。
+5. HINT（EV-07）；✅ `core:domain/ev/Hint.kt` 复用流式 `HINT:` 标记（不额外调用），默认关、≤0.8s 浮现、10s 自消。
+6. 同步 / Key 代理**纯规则 + 契约**；✅ `core:domain/sync/SyncResolver.kt`（白名单、LWW、墓碑）+ `core:domain/model/SyncContract.kt`（路径/头常量）。☐ `server/` Go 二进制 + 客户端 `SyncGateway` / Room 迁移留 M3 后期。
 
 **验收**
-| 场景 | 通过标准 |
-|---|---|
-| 双设备同步 | 手机练完 → 平板上看到会话统计与错题；改平板 → 手机次日拉回一致 |
-| 离线→恢复 | 断网完成 1 次会话（提示离线，无 LLM 时允许仅本地文本复盘或保存草稿）→ 联网自动补传成功 |
-| 冲突 | 两端同时改同一错题状态 → 结果 = 较新 `updatedAt`（可预期） |
-| barge-in | AI 播报中说话 ≤ 400ms 内停止播放并进入聆听 |
-| 代理模式 | 开启模式 B：客户端无 Key 完成对话；白名单外 model 被 403 |
+| 场景 | 通过标准 | 状态 |
+|---|---|---|
+| 双设备同步 | 手机练完 → 平板上看到会话统计与错题；改平板 → 手机次日拉回一致 | ☐ 等服务端部署 |
+| 离线→恢复 | 断网完成 1 次会话（提示离线，无 LLM 时允许仅本地文本复盘或保存草稿）→ 联网自动补传成功 | ☐ 等服务端部署 |
+| 冲突 | 两端同时改同一错题状态 → 结果 = 较新 `updatedAt`（可预期） | ✅ `SyncResolverTest` 覆盖 |
+| barge-in | AI 播报中说话 ≤ 400ms 内停止播放并进入聆听 | ✅ `BargeInTest` + 4 个 CV ViewModel |
+| 代理模式 | 开启模式 B：客户端无 Key 完成对话；白名单外 model 被 403 | ☐ 等服务端部署 |
 
 ### M4 发布打磨（预计 1–2 周）
 
@@ -117,7 +119,7 @@
 | SDK 版本口径 | compileSdk/targetSdk = 37、minSdk = 26 | ✅ README、01 §5.2、04 §1.1 一致 |
 | 模块编号 | CV/GR/EV/RP/VB/PF/ST/SY（README 术语表） | ✅ 01 §3.2 功能 ID、03 各章、04/05 引用一致 |
 | EVResult 契约三对齐 | 03 §4.2 ↔ 04 §6.1 `ev_results` ↔ 05 §4.4 JSON | ✅ 字段（dims/items/highlights/goalGap/tRange）一致 |
-| 同步实体白名单 | 05 §4.2 ↔ 04 §6.1 `dirty` 表 | ✅ session/ev_result/mistake/vocab_note/profile 对齐；turns/录音明确不同步 |
+| 同步实体白名单 | 05 §4.2 ↔ 04 §6.1 `dirty` 表 | ✅ session/ev_result/mistake/vocab_note/profile/grammar_progress 对齐（`SyncResolver.WHITELIST`）；turns/录音明确不同步（`SyncResolver.NEVER_SYNC`）；墓碑 + LWW + deviceId 裁决（`SyncResolverTest`） |
 | Stage / Topic / GrammarPoint | 02 §3/§4/§5 ↔ 01 GR/CV 需求 ↔ 03 页面 | ✅ S0–S4、T1–T8、A–F 组 20 点（MVP A/B/C/E 13 点）在各文档引用一致 |
 | 里程碑编号 | 01 §6（M0–M4）↔ 06 §1/§2 | ✅ 名称与边界一致 |
 | 功能优先级 | 01 §3.2 P0/P1 ↔ 03（已实现标记）↔ 06 M2/M3 范围 | ✅ MVP = P0，v1.1+ = P1 |
@@ -138,6 +140,7 @@
 | R-4 | 个人时间不足、项目烂尾 | 中/高 | 每次 ≤10 分钟的设计 + 里程碑刻意收敛 | 全程 |
 | R-5 | Compose/AGP 版本踩坑 | 低/中 | Studio 模板起步、版本冻结（04 §1.2） | M1 |
 | R-6 | 服务器外网访问不稳定 | 低/中 | 同步频率低 + 离线优先；可切境内部署 | M3 |
+| R-7 | barge-in / HINT / 跟读增加 LLM/网络调用 | 中/中 | barge-in 仅本地状态（`BargeInController`）；HINT 复用流式 `HINT:` 标记不额外调用；跟读离线预筛 + 400 token/句预算兜底 | M3（已缓解） |
 | R-7 | 真实提分效果不达 7.5 | 中/高 | 以 S0 诊断与阶段完成标志做过程校验；S3/S4 前安排 1 次真题模考对照 | 持续 |
 
 ---

@@ -87,6 +87,8 @@
 - CV-03「边说边显字」词级 partial：MiMo 路径是松手后出结果。
 - 点击切换聆听 + VAD 自动说完：未做。
 - ST-02 引擎选择 / 系统 ASR·ML Kit 降级链：未做。
+- 错题重练转 GR（VB-03）、语料收藏（VB-04）：未做。
+- 端云同步服务端部署 / Key 代理开关：`core:domain` 规则与契约已落地，`server/` Go 二进制 + 客户端 `SyncGateway` / Room 迁移未完成。
 
 ### 当前可真机验证的 MVP 范围
 
@@ -99,8 +101,13 @@
 - [x] 错题本列表 / 详情（原文 · 修正 · 为什么 · 维度；可标记已掌握）（VB-02）
 - [x] 档案今日统计 / 四维趋势（PF）
 - [x] 网络/LLM 失败中文提示（断网、超时、401、429、5xx）；可结束会话并保留本地轮次与录音（SY-03 本地）
-- [ ] 端云同步 / Key 代理（后期）
-- [ ] 错题重练转 GR、语料收藏、Barge-in（P1+）
+- [x] 打断（Barge-in）：AI 播报 / 思考中按下麦克风 ≤400ms 内停 TTS、断 LLM 尾、进聆听；用户轮次 `llmMetaJson.bargeInAtMs` 入库供 RP 复盘（CV-04，`core:domain/cv/BargeIn.kt`）
+- [x] 轮内 HINT：默认关；开启后每轮结束 ≤0.8s 浮 1 条小卡（10s 自消），复用流式 `HINT:` 标记不额外调用（EV-07，`core:domain/ev/Hint.kt`）
+- [x] GR 影子跟读：TTS 播示范 → 跟读 → 词重叠预筛 → LLM 判定（≤400 token/句，失败离线给修正）（GR-05，`core:domain/gr/ShadowingJudge.kt`）
+- [x] RP 逐句复盘：`turn.startMs/endMs` 对齐 `FeedbackItem.tRange`，1x / 0.75x 慢放，A-B 复读（`core:domain/rp/RpSegmentMapper.kt` + `ReportScreen`）
+- [x] 同步 / Key 代理**纯规则 + 契约**落地 `core:domain`：白名单、LWW（updatedAt + deviceId + 墓碑）、`SyncContract` 路径常量；`server/` Go 二进制 + 客户端 `SyncGateway`/Room 迁移留 M3 后期（SY-01/02）
+- [ ] 错题重练转 GR、语料收藏
+- [ ] 端云同步服务端部署 / Key 代理开关
 
 ### 当前首页 UI（学习地图）
 
@@ -116,7 +123,7 @@
 
 M1 验收用固定 3 句英文走 MockAsr → MockLlm → MockTts，统计 ASR终稿→LLM首字→TTS起播：
 
-1. **单元测试**：`./gradlew :core:domain:test`（含 `LatencySmokeTest` / `EvJsonParserTest`）
+1. **单元测试**：`./gradlew :core:domain:test`（含 `LatencySmokeTest` / `EvJsonParserTest` / `EvCalibrationTest`，以及 M3 新增 `BargeInTest` / `HintTest` / `ShadowingJudgeTest` / `RpSegmentMapperTest` / `SyncResolverTest`）
 2. **应用内**：长按首页问候区（`SPEAKING MASTER` / `Hello, Alex`）进入调试页，点「运行 LatencySmoke」；报告写入 `files/smoke/latency-smoke-*.md`，并打 logcat tag `LatencySmoke`
 
 ### EV 标定回归（M2）

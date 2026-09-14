@@ -107,7 +107,7 @@ flowchart TB
 #### 关键交互
 1. **按住说话（当前实现）**：按下开始采集麦克风 PCM；松开 = 本轮说完，把该段 WAV 发给 MiMo ASR，气泡先显示「正在识别…」再替换为转写。另提供**点击切换「聆听模式」+ VAD**（P1，未实现）。
 2. **转写上屏**：当前无说话中的词级 partial（系统 SpeechRecognizer 时代的 CV-03 目标仍保留）。误识可点「改」编辑该句文字（编辑后的文本作为入 LLM 的输入）。
-3. **打断 barge-in**：AI 正在 TTS 播报时用户按下麦克风 → 立即停止 TTS 与 LLM 尾巴，进入聆听，并把「打断点」计入会话元数据（复盘可见）。
+3. **打断 barge-in**（✅ 已实现）：AI 正在 TTS 播报 **或 LLM 思考中** 用户按下麦克风 → `BargeInController.onMicPressed` 判定 → 立即停止 TTS 与 LLM 尾巴，进入聆听，并把「打断点」`bargeInAtMs` 写入**用户轮次** `llmMetaJson`（`RpSegmentMapper` 对齐后复盘可见）。`Thinking/Speaking/Asking/Intro` 均允许打断。
 4. **卡壳救场**：「提示」→ 轻量请求 AI 给一个追问或 2–3 个关键词（1 行内），不打断本 Turn 记录。
 5. **结束会话**：确认对话框（剩余轮数不足提示）→ 进入评测流程（若为 Drill 型则直接出 GR 结果）。
 
@@ -179,7 +179,7 @@ sequenceDiagram
 ### 3.2 语法点详情 G1
 
 - 规则速览（1 屏内 2–3 条 + 1 组对比例句）
-- 「先听后说」示范句：TTS 播标准句，可逐句跟读
+- 「先听后说」示范句：TTS 播标准句，可逐句跟读；**影子跟读模式**（GR-05，✅ 已实现）：示范 → 跟读 → 词重叠预筛 → LLM 判定（≤400 token/句，失败离线给修正）
 - 「开始口头产出」主按钮 → G2；附「在对话中刻意练」跳到 S1 配置
 
 ### 3.3 产出任务进行页 G2（GR-02/03 核心）
@@ -251,7 +251,7 @@ stateDiagram-v2
 ### 4.4 HINT 轮内即时轻反馈（EV-07，默认关）
 
 - 仅当配置开启：每 Turn 结束后 0.8s 内浮现 1 条小卡（连接词缺失 / 时态跑偏 / 换词建议），10s 自动消失，可点击展开详情并入错题本。
-- 成本控制：HINT 与对话共用同一流式响应中的一个 `hint` 字段，不额外调用。
+- 成本控制：HINT 与对话共用同一流式响应中的一个 `hint` 字段（`HINT:` 尾行标记，`HintParser.splitReply` 拆分），不额外调用。LLM `SYSTEM_PROMPT` 已加可选 HINT 行指令。
 
 ---
 
@@ -259,9 +259,9 @@ stateDiagram-v2
 
 ### 5.1 复盘页 S4
 
-- 顶部：整段播放 / 0.75x / A-B 复读区
-- 中部：**句段时间轴**（波形条 + Turn 标记）；拖动定位到某句
-- 逐句区（与 EV 错误清单联动）：点某句 → 播放该句 + 展示该句 EV 点评/判定
+- 顶部：整段播放 / 0.75x / 1x / A-B 复读区（`MediaPlayer.playbackParams.setSpeed`，`RpSegmentMapper.clampLoop` 钳位，≥300ms 有效）
+- 中部：**句段时间轴**（`RpSegmentMapper.sentences` 对齐 `turn.startMs/endMs` ↔ `FeedbackItem.tRange`）；点击某句定位播放（已有「跳转到用户轮次」按钮）
+- 逐句区（与 EV 错误清单联动）：点某句 → 播放该句 + 展示该句 EV 点评/判定（通过 `tRange` 高亮句段）
 - 底部动作：`加入错题本` `删掉这句`（改 ASR 误识，触发重新评测提示）`导出音频`
 
 ### 5.2 对齐规则（重要工程约束）

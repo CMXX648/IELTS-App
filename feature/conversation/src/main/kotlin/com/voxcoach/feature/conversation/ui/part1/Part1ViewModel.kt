@@ -28,6 +28,8 @@ import com.voxcoach.core.domain.speech.AsrEngine
 import com.voxcoach.core.domain.speech.SessionAudioCapture
 import com.voxcoach.core.domain.speech.TtsEngine
 import dagger.hilt.android.lifecycle.HiltViewModel
+import com.voxcoach.core.domain.cv.BargeInController
+import com.voxcoach.core.domain.cv.BargeInPhase
 import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.Job
@@ -68,6 +70,8 @@ class Part1ViewModel @Inject constructor(
     private var sessionCreated = false
     private var audioPath: String? = null
     private var listenStartedMs: Long? = null
+    private var pendingBargeInAtMs: Long? = null
+    private var bargeInCount: Int = 0
     private var started = false
 
     init {
@@ -233,6 +237,20 @@ class Part1ViewModel @Inject constructor(
         ) {
             return
         }
+        val bargePhase = when (phase) {
+            Part1UiState.Phase.Asking -> BargeInPhase.TTS_PLAY
+            Part1UiState.Phase.Listening -> BargeInPhase.LISTENING
+            else -> BargeInPhase.IDLE
+        }
+        val elapsed = if (sessionAudioCapture.isRecording) {
+            sessionAudioCapture.elapsedMs()
+        } else {
+            System.currentTimeMillis() - sessionStartedAt
+        }
+        val decision = BargeInController.onMicPressed(bargePhase, elapsed)
+        pendingBargeInAtMs = decision.bargeInAtMs
+        if (decision.shouldInterrupt) bargeInCount += 1
+        pipelineJob?.cancel()
         listenJob?.cancel()
         viewModelScope.launch { ttsEngine.stopAll() }
         listenStartedMs = if (sessionAudioCapture.isRecording) sessionAudioCapture.elapsedMs() else null
@@ -241,7 +259,11 @@ class Part1ViewModel @Inject constructor(
                 phase = Part1UiState.Phase.Listening,
                 partialTranscript = "",
                 finalTranscript = "",
-                statusMessage = "${it.progressLabel} · 正在听…",
+                statusMessage = if (decision.shouldInterrupt) {
+                    "${it.progressLabel} · 已打断，正在听…"
+                } else {
+                    "${it.progressLabel} · 正在听…"
+                },
                 error = null,
             )
         }
@@ -316,6 +338,8 @@ class Part1ViewModel @Inject constructor(
         pipelineJob = viewModelScope.launch {
             runCatching {
                 turnSeq += 1
+                val bargeAt = pendingBargeInAtMs
+                pendingBargeInAtMs = null
                 val userTurn = Turn(
                     id = UUID.randomUUID().toString(),
                     sessionId = sessionId,
@@ -325,6 +349,7 @@ class Part1ViewModel @Inject constructor(
                     seq = turnSeq,
                     startMs = turnStartMs,
                     endMs = turnEndMs,
+                    llmMetaJson = bargeAt?.let { BargeInController.withBargeInMeta(null, it) },
                 )
                 pendingTurns += userTurn
                 turnRepository.insert(userTurn)

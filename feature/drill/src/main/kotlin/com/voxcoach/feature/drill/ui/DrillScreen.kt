@@ -22,6 +22,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -53,6 +54,8 @@ fun DrillRoute(
         onMicReleased = viewModel::onMicReleased,
         onCollect = viewModel::collectToMistakes,
         onRetry = viewModel::retry,
+        onSetMode = viewModel::setMode,
+        onPlayShadowModel = viewModel::playShadowModel,
     )
 }
 
@@ -65,6 +68,8 @@ fun DrillScreen(
     onMicReleased: () -> Unit,
     onCollect: () -> Unit,
     onRetry: () -> Unit,
+    onSetMode: (DrillUiState.Mode) -> Unit,
+    onPlayShadowModel: () -> Unit,
 ) {
     val point = state.point
     Scaffold(
@@ -107,6 +112,28 @@ fun DrillScreen(
                             Spacer(Modifier.height(8.dp))
                             Text("话题提示", style = MaterialTheme.typography.labelLarge)
                             Text(point.topicHint, style = MaterialTheme.typography.bodyLarge)
+                            Spacer(Modifier.height(12.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                FilterChip(
+                                    selected = state.mode == DrillUiState.Mode.Produce,
+                                    onClick = { onSetMode(DrillUiState.Mode.Produce) },
+                                    label = { Text("产出练习") },
+                                )
+                                FilterChip(
+                                    selected = state.mode == DrillUiState.Mode.Shadow,
+                                    onClick = { onSetMode(DrillUiState.Mode.Shadow) },
+                                    label = { Text("影子跟读") },
+                                )
+                            }
+                            if (state.mode == DrillUiState.Mode.Shadow) {
+                                Spacer(Modifier.height(8.dp))
+                                OutlinedButton(
+                                    onClick = onPlayShadowModel,
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    Text("播放示范句")
+                                }
+                            }
                         }
                     }
                 }
