@@ -2,7 +2,7 @@
 
 | 项目 | 内容 |
 |---|---|
-| 文档版本 | v0.9.2（M3 阶段1+2 落地：CV-04 barge-in / EV-07 HINT / GR-05 影子跟读 / RP 逐句复盘+0.75x+A-B / SY 纯规则与契约；`server/` Go 二进制 + 客户端 `SyncGateway`/Room 迁移留 M3 后期） |
+| 文档版本 | v0.9.3（M3 后期落地：SY 同步全链路代码 —— `server/` Go 同步服务 + 客户端 `OkHttpSyncGateway`/`SyncEngine`/Room v4 `sync_state`；☐ 服务端部署到 2C2G 与双设备实测验收） |
 | 关联 | 01 §6 里程碑概览、02 学习路径、03 功能规格、04 Android 架构、05 后端契约 |
 | 用途 | ① 后续编码阶段的执行地图；② 设计文档全库一致性的校验结论 |
 
@@ -15,7 +15,7 @@
 | **M0** | 设计定稿 | 本套文档评审冻结 | — | 本文档 §4 开放问题全部给出结论；术语表无漂移 |
 | **M1** | 工程骨架 + 技术验证 | Android 工程初始化；打通「ASR→LLM→TTS」单轮通路；建立编译/版本基线 | M0 | 真机完成 ≥3 轮稳定对话；延迟预算摸底数据出报告 |
 | **M2** | MVP 功能闭环（P0） | CV 自由对话、GR 单句产出判定、EV 四维报告、录音与回放基础、错题本基础、档案基础、直连 LLM 配置 | M1 | 连续 7 天日常自用无阻断；自测用例全绿 |
-| **M3** | 完整学习闭环（P1） | 模拟口试 P1/P2/P3（✅ M2 已超前）、barge-in（✅）、影子跟读（✅）、逐句复盘+0.75x+A-B（✅）、HINT（✅）、云同步与 LLM Key 代理（✅ 纯规则+契约，☐ `server/` Go 二进制 + 客户端 `SyncGateway`/Room 迁移 留 M3 后期） | M2 | 双端同步验证通过；弱网/离线场景通过（服务端部署前以本地闭环为主） |
+| **M3** | 完整学习闭环（P1） | 模拟口试 P1/P2/P3（✅ M2 已超前）、barge-in（✅）、影子跟读（✅）、逐句复盘+0.75x+A-B（✅）、HINT（✅）、云同步与 LLM Key 代理（✅ 全链路代码：`server/` Go 服务 + 客户端 `SyncGateway`/`SyncEngine`/Room v4；☐ 服务端部署 2C2G 与双设备实测） | M2 | 双端同步验证通过；弱网/离线场景通过（服务端部署前以本地闭环为主） |
 | **M4** | 发布打磨 | 大屏/深色/无障碍收尾、录音空间管理、隐私合规自查、正式签名包 | M3 | 可安装正式版；首轮 7.5 差距报告可读 |
 
 > 编码阶段的颗粒度任务（issues/backlog）在 M1 开始前从本文档各里程碑拆解生成。
@@ -63,7 +63,11 @@
 3. GR 影子跟读（GR-05）；✅ `core:domain/gr/ShadowingJudge.kt` + `DrillViewModel.judgeShadow`（词重叠预筛 + LLM 判定 ≤400 token/句，失败离线给修正）+ `DrillScreen` 模式切换。
 4. 逐句复盘 RP（句段索引）；✅ `core:domain/rp/RpSegmentMapper.kt` 对齐 `turn.startMs/endMs` ↔ `FeedbackItem.tRange`；`ReportScreen` 加 1x/0.75x + A-B 复读。
 5. HINT（EV-07）；✅ `core:domain/ev/Hint.kt` 复用流式 `HINT:` 标记（不额外调用），默认关、≤0.8s 浮现、10s 自消。
-6. 同步 / Key 代理**纯规则 + 契约**；✅ `core:domain/sync/SyncResolver.kt`（白名单、LWW、墓碑）+ `core:domain/model/SyncContract.kt`（路径/头常量）。☐ `server/` Go 二进制 + 客户端 `SyncGateway` / Room 迁移留 M3 后期。
+6. 同步 / Key 代理；✅ 全链路代码落地：
+   - 规则 + 契约（M3 前期）：`core:domain/sync/SyncResolver.kt`（白名单、LWW、墓碑）+ `core:domain/model/SyncContract.kt`（路径/头常量）。
+   - 服务端：`server/` Go 单二进制（SQLite WAL，`change_log` 主表 + 镜像表；注册设备/吊销、push LWW 裁决、pull 游标、stats 只读聚合、可选模式 B LLM 代理 + 模型白名单 + 按设备限流）；`server/server_test.go` 覆盖注册→push→pull→LWW 冲突→墓碑→游标→统计→吊销。
+   - 客户端：`core:data/sync/OkHttpSyncGateway.kt`（§9 错误码映射）、`SyncEngine.kt`（push 脏数据 → pull → LWW 合并 → 游标推进）、Room v4 迁移（`sync_state` 表 + `mistakes.updatedAt`）、设置页同步区（服务器地址 / 注册设备 / 立即同步）。
+   - ☐ 部署到 2C2G（`server/README.md`）后跑双设备 / 离线补传 / 代理模式三项验收。
 
 **验收**
 | 场景 | 通过标准 | 状态 |

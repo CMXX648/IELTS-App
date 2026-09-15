@@ -11,6 +11,7 @@ import com.voxcoach.core.data.db.entity.GrammarPointEntity
 import com.voxcoach.core.data.db.entity.FeedbackItemEntity
 import com.voxcoach.core.data.db.entity.MistakeEntity
 import com.voxcoach.core.data.db.entity.SessionEntity
+import com.voxcoach.core.data.db.entity.SyncStateEntity
 import com.voxcoach.core.data.db.entity.TopicEntity
 import com.voxcoach.core.data.db.entity.TurnEntity
 import com.voxcoach.core.data.db.entity.UserProfileEntity
@@ -49,6 +50,10 @@ interface SessionDao {
         "SELECT * FROM sessions WHERE deleted = 0 ORDER BY startedAt DESC LIMIT :limit",
     )
     suspend fun listRecent(limit: Int): List<SessionEntity>
+
+    /** M3 SY: full scan for pending-change detection (personal data scale). */
+    @Query("SELECT * FROM sessions")
+    suspend fun listAll(): List<SessionEntity>
 
     @Query(
         """
@@ -104,6 +109,10 @@ interface EvDao {
     @Query("SELECT * FROM ev_results ORDER BY createdAt DESC LIMIT :limit")
     suspend fun listRecent(limit: Int): List<EvResultEntity>
 
+    /** M3 SY: full scan for pending-change detection. */
+    @Query("SELECT * FROM ev_results")
+    suspend fun listAll(): List<EvResultEntity>
+
     @Query("SELECT * FROM feedback_items WHERE evId = :evId")
     suspend fun listItems(evId: String): List<FeedbackItemEntity>
 
@@ -128,8 +137,25 @@ interface MistakeDao {
     @Query("SELECT * FROM mistakes WHERE status = 'OPEN' ORDER BY createdAt DESC")
     fun observeOpen(): Flow<List<MistakeEntity>>
 
-    @Query("UPDATE mistakes SET status = 'MASTERED' WHERE id = :id")
-    suspend fun markMastered(id: String)
+    /** M3 SY: full scan for pending-change detection. */
+    @Query("SELECT * FROM mistakes")
+    suspend fun listAll(): List<MistakeEntity>
+
+    @Query("UPDATE mistakes SET status = 'MASTERED', updatedAt = :at WHERE id = :id")
+    suspend fun markMastered(id: String, at: Long)
+}
+
+/** M3 SY oplog read/write (docs/04 §6.1). */
+@Dao
+interface SyncStateDao {
+    @Query("SELECT * FROM sync_state")
+    suspend fun getAll(): List<SyncStateEntity>
+
+    @Query("SELECT * FROM sync_state WHERE entity = :entity AND entityId = :entityId LIMIT 1")
+    suspend fun get(entity: String, entityId: String): SyncStateEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(state: SyncStateEntity)
 }
 
 @Dao

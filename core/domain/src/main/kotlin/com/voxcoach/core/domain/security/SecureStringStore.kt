@@ -11,7 +11,9 @@ interface SecureStringStore {
     suspend fun remove(key: String)
 }
 
-/** Canonical key for ST-01 LLM apiKey in [SecureStringStore]. */
 object SecureKeys {
     const val LLM_API_KEY = "llm_api_key"
+
+    /** SY device key (docs/05 §4.1) — Keystore-wrapped like ST-01 apiKey. */
+    const val SYNC_DEVICE_KEY = "sync_device_key"
 }

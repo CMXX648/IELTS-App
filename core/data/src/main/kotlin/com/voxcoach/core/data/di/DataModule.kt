@@ -22,6 +22,8 @@ import com.voxcoach.core.data.repo.TurnRepositoryImpl
 import com.voxcoach.core.data.security.AndroidKeystoreSecureStringStore
 import com.voxcoach.core.data.settings.DataStoreLlmSettingsRepository
 import com.voxcoach.core.data.settings.DataStoreOnboardingRepository
+import com.voxcoach.core.data.settings.DataStoreSyncSettingsRepository
+import com.voxcoach.core.data.sync.OkHttpSyncGateway
 import com.voxcoach.core.domain.security.SecureStringStore
 import com.voxcoach.core.domain.repository.DrillAttemptRepository
 import com.voxcoach.core.domain.repository.EvRepository
@@ -33,6 +35,8 @@ import com.voxcoach.core.domain.repository.TopicRepository
 import com.voxcoach.core.domain.repository.TurnRepository
 import com.voxcoach.core.domain.settings.LlmSettingsRepository
 import com.voxcoach.core.domain.settings.OnboardingRepository
+import com.voxcoach.core.domain.settings.SyncSettingsRepository
+import com.voxcoach.core.domain.sync.SyncGateway
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -80,6 +84,12 @@ abstract class DataBindModule {
 
     @Binds @Singleton
     abstract fun bindDrillAttempt(impl: DrillAttemptRepositoryImpl): DrillAttemptRepository
+
+    @Binds @Singleton
+    abstract fun bindSyncSettings(impl: DataStoreSyncSettingsRepository): SyncSettingsRepository
+
+    @Binds @Singleton
+    abstract fun bindSyncGateway(impl: OkHttpSyncGateway): SyncGateway
 }
 
 @Module

@@ -78,6 +78,7 @@
 | TTS | `core/speech/.../MimoTtsEngine.kt` |
 | 对话 LLM | `core/llm/.../OpenAiCompatibleLlmClient.kt` |
 | 设置读写 | `DataStoreLlmSettingsRepository` + `SettingsScreen` |
+| 同步（SY） | 客户端 `core/data/sync/SyncEngine.kt` + `OkHttpSyncGateway.kt`；服务端 `server/`（Go） |
 | 会话 wav | `MediaRecorderSessionAudioCapture`（实现已改为 AudioRecord PCM，类名未改以免大面积重命名） |
 
 `SystemAsrEngine` / `SystemTtsEngine` 仍留在仓库，**未绑定**，不要误以为线上还走系统引擎。
@@ -88,7 +89,7 @@
 - 点击切换聆听 + VAD 自动说完：未做。
 - ST-02 引擎选择 / 系统 ASR·ML Kit 降级链：未做。
 - 错题重练转 GR（VB-03）、语料收藏（VB-04）：未做。
-- 端云同步服务端部署 / Key 代理开关：`core:domain` 规则与契约已落地，`server/` Go 二进制 + 客户端 `SyncGateway` / Room 迁移未完成。
+- 端云同步：`core:domain` 规则与契约、`server/` Go 同步服务（设备注册 / push / pull / stats / 可选 LLM 代理模式 B）、客户端 `OkHttpSyncGateway` + `SyncEngine` + Room v4（`sync_state`）均已落地；**服务端尚未部署到 2C2G**（构建与部署见 `server/README.md`）。
 
 ### 当前可真机验证的 MVP 范围
 
@@ -105,9 +106,10 @@
 - [x] 轮内 HINT：默认关；开启后每轮结束 ≤0.8s 浮 1 条小卡（10s 自消），复用流式 `HINT:` 标记不额外调用（EV-07，`core:domain/ev/Hint.kt`）
 - [x] GR 影子跟读：TTS 播示范 → 跟读 → 词重叠预筛 → LLM 判定（≤400 token/句，失败离线给修正）（GR-05，`core:domain/gr/ShadowingJudge.kt`）
 - [x] RP 逐句复盘：`turn.startMs/endMs` 对齐 `FeedbackItem.tRange`，1x / 0.75x 慢放，A-B 复读（`core:domain/rp/RpSegmentMapper.kt` + `ReportScreen`）
-- [x] 同步 / Key 代理**纯规则 + 契约**落地 `core:domain`：白名单、LWW（updatedAt + deviceId + 墓碑）、`SyncContract` 路径常量；`server/` Go 二进制 + 客户端 `SyncGateway`/Room 迁移留 M3 后期（SY-01/02）
-- [ ] 错题重练转 GR、语料收藏
-- [ ] 端云同步服务端部署 / Key 代理开关
+- [x] 同步 / Key 代理**纯规则 + 契约**落地 `core:domain`：白名单、LWW（updatedAt + deviceId + 墓碑）、`SyncContract` 路径常量（SY-01/02）
+- [x] 同步全链路代码：`server/` Go 同步服务（`server/README.md`）+ 客户端 `core:data/sync`（`OkHttpSyncGateway` / `SyncEngine` / Room v4 `sync_state`）；设置页可填服务器地址、注册设备、手动同步
+- [ ] 错题重练转 GR（VB-03）、语料收藏（VB-04）
+- [ ] 服务端部署到 2C2G + 双设备同步 / 离线补传 / Key 代理三项实测验收
 
 ### 当前首页 UI（学习地图）
 

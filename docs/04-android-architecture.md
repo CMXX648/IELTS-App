@@ -207,7 +207,7 @@ erDiagram
 | `drill_attempts` | id, grammarPointId, promptId, userSentence, hit(bool), feedback(json), triedAt | GR 记录与掌握度计算源 |
 | `vocab_notes` | id, term, meaning, example, exampleSource, topicId, sessionId, audioHint | 语料收藏 |
 | `user_profile` | version, stage, targetBand, dimTrendCache(json), streak, totals | 单行档案 + 缓存 |
-| `sync_state` | entity, entityId, updatedAt, op(UP/DEL), pushedAt | 增量同步 oplog（纯规则已落地 `core:domain/sync/SyncResolver.kt`：白名单 `WHITELIST={session,ev_result,mistake,vocab_note,profile,grammar_progress}`、`NEVER_SYNC={turn,turns,recording,audio,wav}`、LWW + deviceId + 墓碑；路径/头常量见 `core:domain/model/SyncContract.kt`；Room 表 + 客户端 `SyncGateway` 留 M3 后期） |
+| `sync_state` | entity, entityId, updatedAt, op(UP/DEL), pushedAt | 增量同步 oplog（规则 `core:domain/sync/SyncResolver.kt`：白名单、`NEVER_SYNC`、LWW + deviceId + 墓碑；路径/头常量 `core:domain/model/SyncContract.kt`；DB v4 已建 `sync_state` 表 + `mistakes.updatedAt` 列；客户端 `core:data/sync/SyncEngine.kt` + `OkHttpSyncGateway.kt`，服务端 `server/` Go 服务已落地，部署待 2C2G） |
 
 - 统计聚合：趋势类读 `ev_results`/`sessions` 用 Room 原生聚合或预聚合 `dim_trend_cache`（PF 页秒开）。
 - **种子数据**（GrammarPoint/Topic 词场）版本化：`SeedDataStore` 按 schemaVersion 增量打补丁，勿覆盖用户自定义。

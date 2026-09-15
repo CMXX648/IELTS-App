@@ -99,6 +99,25 @@ data class MistakeEntity(
     val retriedCount: Int,
     val lastRetriedAt: Long?,
     val createdAt: Long,
+    /** M3 SY: LWW timestamp; bumped on status change, set from remote on apply. */
+    val updatedAt: Long = 0,
+)
+
+/**
+ * M3 SY per-entity sync oplog (docs/04 §6.1 `sync_state`):
+ * `updatedAt` = LWW version last pushed/applied; rows whose entity updatedAt
+ * exceeds it are pending changes for the next push.
+ */
+@Entity(
+    tableName = "sync_state",
+    primaryKeys = ["entity", "entityId"],
+)
+data class SyncStateEntity(
+    val entity: String,
+    val entityId: String,
+    val updatedAt: Long,
+    val op: String,
+    val pushedAt: Long,
 )
 
 @Entity(tableName = "user_profile")

@@ -5,6 +5,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.voxcoach.core.data.db.dao.DrillAttemptDao
 import com.voxcoach.core.data.db.dao.EvDao
@@ -12,6 +13,7 @@ import com.voxcoach.core.data.db.dao.GrammarPointDao
 import com.voxcoach.core.data.db.dao.MistakeDao
 import com.voxcoach.core.data.db.dao.ProfileDao
 import com.voxcoach.core.data.db.dao.SessionDao
+import com.voxcoach.core.data.db.dao.SyncStateDao
 import com.voxcoach.core.data.db.dao.TopicDao
 import com.voxcoach.core.data.db.dao.TurnDao
 import com.voxcoach.core.data.db.entity.DrillAttemptEntity
@@ -20,6 +22,7 @@ import com.voxcoach.core.data.db.entity.GrammarPointEntity
 import com.voxcoach.core.data.db.entity.FeedbackItemEntity
 import com.voxcoach.core.data.db.entity.MistakeEntity
 import com.voxcoach.core.data.db.entity.SessionEntity
+import com.voxcoach.core.data.db.entity.SyncStateEntity
 import com.voxcoach.core.data.db.entity.TopicEntity
 import com.voxcoach.core.data.db.entity.TurnEntity
 import com.voxcoach.core.data.db.entity.UserProfileEntity
@@ -35,6 +38,7 @@ import com.voxcoach.core.data.db.entity.UserProfileEntity
         UserProfileEntity::class,
         GrammarPointEntity::class,
         DrillAttemptEntity::class,
+        SyncStateEntity::class,
     ],
     version = VoxDatabase.SCHEMA_VERSION,
     exportSchema = false,
@@ -49,13 +53,34 @@ abstract class VoxDatabase : RoomDatabase() {
     abstract fun profileDao(): ProfileDao
     abstract fun grammarPointDao(): GrammarPointDao
     abstract fun drillAttemptDao(): DrillAttemptDao
+    abstract fun syncStateDao(): SyncStateDao
 
     companion object {
-        const val SCHEMA_VERSION = 3
+        const val SCHEMA_VERSION = 4
         const val NAME = "voxcoach.db"
+
+        /** M3 SY: sync_state oplog + mistakes.updatedAt LWW column. */
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS sync_state (
+                        entity TEXT NOT NULL,
+                        entityId TEXT NOT NULL,
+                        updatedAt INTEGER NOT NULL,
+                        op TEXT NOT NULL,
+                        pushedAt INTEGER NOT NULL,
+                        PRIMARY KEY(entity, entityId)
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL("ALTER TABLE mistakes ADD COLUMN updatedAt INTEGER NOT NULL DEFAULT 0")
+            }
+        }
 
         fun build(context: Context): VoxDatabase =
             Room.databaseBuilder(context, VoxDatabase::class.java, NAME)
+                .addMigrations(MIGRATION_3_4)
                 .addCallback(object : Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {
                         super.onCreate(db)
