@@ -25,6 +25,9 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
       # GitHub runner 自带 Android SDK 且已预接受 license；
       # AGP 会按 compileSdk=37 自动补装缺失的 platform/build-tools
       - name: Build debug APK
