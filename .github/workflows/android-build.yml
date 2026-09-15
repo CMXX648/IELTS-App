@@ -1,0 +1,41 @@
+name: android-build
+
+# 每次推送到 main（或开 PR）自动编译 APK；也可在 Actions 页手动触发
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # Gradle 依赖/发行版缓存（gradle-wrapper 与依赖都会缓存）
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # GitHub runner 自带 Android SDK 且已预接受 license；
+      # AGP 会按 compileSdk=37 自动补装缺失的 platform/build-tools
+      - name: Build debug APK
+        run: ./gradlew :app:assembleDebug --stacktrace
+
+      - name: Run JVM unit tests
+        run: ./gradlew :core:domain:test :core:data:test
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: voxcoach-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
